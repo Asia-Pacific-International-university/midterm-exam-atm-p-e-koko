@@ -6,6 +6,7 @@ $message = ""; // store success message
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $name  = $_POST['name'];
     $email = $_POST['email'];
+    $pin   = $_POST['pin'];
 
     $sql = "INSERT INTO users (name, email, pin, balance) 
             VALUES (:name, :email, :pin, :balance)";
@@ -14,7 +15,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($stmt->execute([
         ':name'    => $name,
         ':email'   => $email,
-        ':pin'     => password_hash("1234", PASSWORD_DEFAULT),
+        ':pin'     => password_hash($pin, PASSWORD_DEFAULT),
         ':balance' => 0.00
     ])) {
         $message = "✅ Registration saved!";
@@ -23,8 +24,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,6 +44,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <label for="email">Email:</label>
         <input type="email" id="email" name="email" required>
+
+        <label for="pin">PIN:</label>
+        <input type="password" id="pin" name="pin" required minlength="4" maxlength="6" pattern="\d{4,6}" 
+               title="PIN must be 4–6 digits">
 
         <button type="submit">Register</button>
     </form>
