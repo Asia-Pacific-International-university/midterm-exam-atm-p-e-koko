@@ -1,8 +1,9 @@
 <?php
 include "db.php"; // connect to database
+include "helpers.php"; // include helper functions
 
-$email = $_POST['email'];
-$pin   = $_POST['pin'];
+$email = cleanInput($_POST['email']);
+$pin   = cleanInput($_POST['pin']);
 
 // Fetch user by email
 $sql  = "SELECT id, name, email, pin FROM users WHERE email = :email LIMIT 1";
@@ -19,6 +20,6 @@ if ($user && password_verify($pin, $user['pin'])) {
     exit; // stop execution after redirect
 } else {
     //Wrong email or PIN
-    $message = "Invalid email or PIN!";
+    $message = "Wrong username or password.";
     // return control back to login.php without redirect
 }

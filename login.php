@@ -1,5 +1,6 @@
 <?php
 session_start(); // start session at the top
+include "includes/helpers.php";
 
 // If already logged in, redirect
 if (isset($_SESSION['user_id'])) {
@@ -10,7 +11,16 @@ if (isset($_SESSION['user_id'])) {
 $message = ""; // store error messages
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    require "includes/auth.php"; // check login logic
+    // Clean input
+    $email = cleanInput($_POST['email']);
+    $pin   = cleanInput($_POST['pin']);
+    
+    // Basic input check (not showing specific errors for security)
+    if (!empty($email) && !empty($pin)) {
+        require "includes/auth.php"; // check login logic
+    } else {
+        $message = "Please enter both email and PIN.";
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -35,6 +45,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <input type="password" id="pin" name="pin" required>
 
         <button type="submit">Login</button>
+        
+        <p style="text-align: center; margin-top: 15px;">
+            Don't have an account? <a href="register.php">Register here</a>
+        </p>
     </form>
 </body>
 </html>
