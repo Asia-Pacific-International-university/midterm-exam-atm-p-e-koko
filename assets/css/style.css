@@ -1,4 +1,4 @@
-/* General body styles */
+/* ---------------- General body styles ---------------- */
 body {
     font-family: Arial, sans-serif;
     background: #f0f2f5;
@@ -9,7 +9,7 @@ body {
     margin: 0;
 }
 
-/* Form container */
+/* ---------------- Form container ---------------- */
 form {
     background: #ffffff;
     padding: 30px 40px;
@@ -53,4 +53,69 @@ button {
 
 button:hover {
     background-color: #45a049;
+}
+
+/* ---------------- Dashboard Page ---------------- */
+.dashboard-container {
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    margin: 0 auto;
+}
+
+.card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+
+.card-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #111827;
+}
+
+.card-balance {
+    font-size: 1rem;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.balance-amount {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #16a34a;
+    margin: 0;
+}
+
+.menu {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.menu .btn {
+    display: block;
+    text-decoration: none;
+    background: #2563eb;
+    color: white;
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.menu .btn:hover {
+    background: #1d4ed8;
+}
+
+.menu .btn-danger {
+    background: #dc2626;
+}
+
+.menu .btn-danger:hover {
+    background: #b91c1c;
 }
