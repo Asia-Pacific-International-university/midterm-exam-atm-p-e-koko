@@ -79,4 +79,96 @@ function getValidationErrors($name, $email, $pin) {
     return $errors;
 }
 }
+
+// Log user activity
+if (!function_exists('logActivity')) {
+function logActivity($userId, $activityType, $description = null, $pdo = null) {
+    if (!$pdo) {
+        require_once 'db.php';
+        global $pdo;
+    }
+    
+    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+    
+    $sql = "INSERT INTO user_activities (user_id, activity_type, description, ip_address, user_agent) 
+            VALUES (:user_id, :activity_type, :description, :ip_address, :user_agent)";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':user_id' => $userId,
+        ':activity_type' => $activityType,
+        ':description' => $description,
+        ':ip_address' => $ipAddress,
+        ':user_agent' => $userAgent
+    ]);
+}
+}
+
+// Get recent activities for a user
+if (!function_exists('getRecentActivities')) {
+function getRecentActivities($userId, $limit = 5, $pdo = null) {
+    if (!$pdo) {
+        require_once 'db.php';
+        global $pdo;
+    }
+    
+    $sql = "SELECT activity_type, description, ip_address, created_at 
+            FROM user_activities 
+            WHERE user_id = :user_id 
+            ORDER BY created_at DESC 
+            LIMIT :limit";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+    $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+}
+
+// Format activity type for display
+if (!function_exists('formatActivityType')) {
+function formatActivityType($activityType) {
+    switch($activityType) {
+        case 'login':
+            return '🔓 Successful Login';
+        case 'logout':
+            return '🔒 Logout';
+        case 'failed_login':
+            return '❌ Failed Login Attempt';
+        case 'account_locked':
+            return '🚫 Account Locked';
+        default:
+            return '📝 ' . ucfirst(str_replace('_', ' ', $activityType));
+    }
+}
+}
+
+// Return only an emoji/icon for an activity type
+if (!function_exists('activityIcon')) {
+function activityIcon($activityType) {
+    switch($activityType) {
+        case 'login': return '🔓';
+        case 'logout': return '🔒';
+        case 'failed_login': return '❌';
+        case 'account_locked': return '🚫';
+        default: return '📝';
+    }
+}
+}
+
+// Return only a clean text label for an activity type
+if (!function_exists('activityLabel')) {
+function activityLabel($activityType) {
+    switch($activityType) {
+        case 'login': return 'Successful Login';
+        case 'logout': return 'Logout';
+        case 'failed_login': return 'Failed Login Attempt';
+        case 'account_locked': return 'Account Locked';
+        default: return ucfirst(str_replace('_', ' ', $activityType));
+    }
+}
+}
 ?>

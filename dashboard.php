@@ -1,6 +1,7 @@
 <?php
 session_start();
 require "includes/db.php";
+require "includes/helpers.php";
 
 // Redirect to login if not logged in
 if (!isset($_SESSION['user_id'])) {
@@ -21,6 +22,10 @@ if (!$user) {
 
 $balance = number_format($user['balance'], 2);
 $name    = htmlspecialchars($user['name']);
+$initial = strtoupper(substr($name, 0, 1));
+
+// Get recent activities
+$recentActivities = getRecentActivities($_SESSION['user_id'], 5, $pdo);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,19 +35,79 @@ $name    = htmlspecialchars($user['name']);
     <link rel="stylesheet" href="assets/css/style.css" type="text/css">
     <title>Dashboard</title>
 </head>
-<body>
-    <div class="dashboard-container">
-        <div class="card">
-            <h2 class="card-title">Welcome, <?php echo $name; ?> 👋</h2>
-            <p class="card-balance">Your Balance</p>
-            <h1 class="balance-amount">฿<?php echo $balance; ?></h1>
-        </div>
+<body class="dashboard-page">
+    <div class="dashboard-wrapper">
+        <header class="dashboard-header">
+            <div class="brand">
+                <div class="brand-logo">฿</div>
+                <div class="brand-name">My ATM</div>
+            </div>
+            <div class="user-info">
+                <div class="avatar" aria-hidden="true"><?php echo $initial; ?></div>
+                <div class="user-meta">
+                    <div class="hello">Welcome back,</div>
+                    <div class="user-name"><?php echo $name; ?></div>
+                </div>
+                <a href="logout.php" class="header-link">Logout</a>
+            </div>
+        </header>
 
-        <div class="menu">
-            <a href="transaction.php" class="btn">💰 Make Transaction</a>
-            <a href="history.php" class="btn">📜 View History</a>
-            <a href="logout.php" class="btn btn-danger">🚪 Logout</a>
-        </div>
+        <main class="dashboard-main">
+            <section class="dashboard-grid">
+                <!-- Balance & Actions -->
+                <div class="card balance-card">
+                    <div class="balance-top">
+                        <div class="balance-label">Current Balance</div>
+                        <div class="balance-amount-lg">฿<?php echo $balance; ?></div>
+                    </div>
+                    <div class="actions">
+                        <a href="transaction.php" class="action-btn">
+                            <span class="icon">💰</span>
+                            <span class="label">Make Transaction</span>
+                        </a>
+                        <a href="history.php" class="action-btn">
+                            <span class="icon">📜</span>
+                            <span class="label">View History</span>
+                        </a>
+                        <a href="logout.php" class="action-btn danger">
+                            <span class="icon">🚪</span>
+                            <span class="label">Logout</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Recent Activities -->
+                <div class="card activities-card">
+                    <div class="card-head">
+                        <h3>Recent Activities</h3>
+                        <span class="muted">Last 5 events</span>
+                    </div>
+                    <?php if (empty($recentActivities)): ?>
+                        <p class="empty-state">No recent activities</p>
+                    <?php else: ?>
+                        <div class="activity-list">
+                            <?php foreach ($recentActivities as $activity): ?>
+                                <div class="activity-row">
+                                    <div class="activity-icon" title="<?php echo htmlspecialchars($activity['activity_type']); ?>"><?php echo activityIcon($activity['activity_type']); ?></div>
+                                    <div class="activity-info">
+                                        <div class="activity-title"><?php echo activityLabel($activity['activity_type']); ?></div>
+                                        <?php if ($activity['description']): ?>
+                                            <div class="activity-desc"><?php echo htmlspecialchars($activity['description']); ?></div>
+                                        <?php endif; ?>
+                                        <div class="activity-time">
+                                            <?php 
+                                            $activityTime = new DateTime($activity['created_at']);
+                                            echo $activityTime->format('M j, Y g:i A');
+                                            ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </section>
+        </main>
     </div>
 </body>
 </html>
