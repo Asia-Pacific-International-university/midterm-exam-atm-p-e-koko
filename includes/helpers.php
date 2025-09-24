@@ -316,4 +316,136 @@ function processTransfer($senderId, $recipientId, $amount, $senderNewBalance, $r
     }
 }
 }
+
+// Get transactions with filtering and pagination
+if (!function_exists('getTransactionsWithFilters')) {
+function getTransactionsWithFilters($userId, $filters = [], $page = 1, $perPage = 10, $pdo) {
+    $conditions = ["user_id = :user_id"];
+    $params = [':user_id' => $userId];
+    
+    // Add date range filter
+    if (!empty($filters['date_from'])) {
+        $conditions[] = "DATE(created_at) >= :date_from";
+        $params[':date_from'] = $filters['date_from'];
+    }
+    
+    if (!empty($filters['date_to'])) {
+        $conditions[] = "DATE(created_at) <= :date_to";
+        $params[':date_to'] = $filters['date_to'];
+    }
+    
+    // Add transaction type filter
+    if (!empty($filters['type']) && $filters['type'] !== 'all') {
+        $conditions[] = "type = :type";
+        $params[':type'] = $filters['type'];
+    }
+    
+    // Build WHERE clause
+    $whereClause = implode(' AND ', $conditions);
+    
+    // Calculate offset for pagination
+    $offset = ($page - 1) * $perPage;
+    
+    // Get total count for pagination
+    $countSql = "SELECT COUNT(*) as total FROM transactions WHERE $whereClause";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($params);
+    $totalTransactions = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+    
+    // Get transactions with pagination
+    $sql = "SELECT id, type, amount, balance_after, created_at 
+            FROM transactions 
+            WHERE $whereClause 
+            ORDER BY created_at DESC 
+            LIMIT :limit OFFSET :offset";
+    
+    $stmt = $pdo->prepare($sql);
+    
+    // Bind all parameters
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
+    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    
+    $stmt->execute();
+    $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    return [
+        'transactions' => $transactions,
+        'total' => $totalTransactions,
+        'current_page' => $page,
+        'per_page' => $perPage,
+        'total_pages' => ceil($totalTransactions / $perPage)
+    ];
+}
+}
+
+// Format transaction amount for display
+if (!function_exists('formatTransactionAmount')) {
+function formatTransactionAmount($amount, $type) {
+    $formattedAmount = number_format(abs($amount), 2);
+    
+    switch ($type) {
+        case 'deposit':
+            return '+$' . $formattedAmount;
+        case 'withdraw':
+            return '-$' . $formattedAmount;
+        case 'transfer':
+            return ($amount > 0 ? '+' : '-') . '$' . $formattedAmount;
+        default:
+            return '$' . $formattedAmount;
+    }
+}
+}
+
+// Get transaction icon for display
+if (!function_exists('getTransactionIcon')) {
+function getTransactionIcon($type, $amount = 0) {
+    switch ($type) {
+        case 'deposit':
+            return '<i class="fas fa-plus-circle text-success"></i>';
+        case 'withdraw':
+            return '<i class="fas fa-minus-circle text-danger"></i>';
+        case 'transfer':
+            return $amount > 0 
+                ? '<i class="fas fa-arrow-down text-success"></i>' 
+                : '<i class="fas fa-arrow-up text-primary"></i>';
+        default:
+            return '<i class="fas fa-exchange-alt text-secondary"></i>';
+    }
+}
+}
+
+// Get transaction description
+if (!function_exists('getTransactionDescription')) {
+function getTransactionDescription($type, $amount) {
+    switch ($type) {
+        case 'deposit':
+            return 'Money Deposit';
+        case 'withdraw':
+            return 'Cash Withdrawal';
+        case 'transfer':
+            return $amount > 0 ? 'Transfer Received' : 'Transfer Sent';
+        default:
+            return ucfirst($type);
+    }
+}
+}
+
+// Get transaction CSS class for styling
+if (!function_exists('getTransactionClass')) {
+function getTransactionClass($type, $amount = 0) {
+    switch ($type) {
+        case 'deposit':
+            return 'table-success';
+        case 'withdraw':
+            return 'table-danger';
+        case 'transfer':
+            return $amount > 0 ? 'table-info' : 'table-warning';
+        default:
+            return '';
+    }
+}
+}
 ?>
