@@ -2,9 +2,13 @@
 session_start();
 require "includes/db.php";
 require "includes/helpers.php";
+require "includes/auth.php";
 
-// Redirect to login if not logged in
-if (!isset($_SESSION['user_id'])) {
+// Require login - will redirect to login page if not logged in
+requireLogin();
+
+// Verify user session is still valid
+if (!verifyUserSession($pdo)) {
     header("Location: login.php");
     exit;
 }

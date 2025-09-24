@@ -140,6 +140,10 @@ function formatActivityType($activityType) {
             return '❌ Failed Login Attempt';
         case 'account_locked':
             return '🚫 Account Locked';
+        case 'deposit':
+            return '💰 Deposit';
+        case 'withdraw':
+            return '💸 Withdrawal';
         default:
             return '📝 ' . ucfirst(str_replace('_', ' ', $activityType));
     }
@@ -154,6 +158,8 @@ function activityIcon($activityType) {
         case 'logout': return '🔒';
         case 'failed_login': return '❌';
         case 'account_locked': return '🚫';
+        case 'deposit': return '💰';
+        case 'withdraw': return '💸';
         default: return '📝';
     }
 }
@@ -167,7 +173,46 @@ function activityLabel($activityType) {
         case 'logout': return 'Logout';
         case 'failed_login': return 'Failed Login Attempt';
         case 'account_locked': return 'Account Locked';
+        case 'deposit': return 'Deposit';
+        case 'withdraw': return 'Withdrawal';
         default: return ucfirst(str_replace('_', ' ', $activityType));
+    }
+}
+}
+
+// Process transaction (deposit or withdraw)
+if (!function_exists('processTransaction')) {
+function processTransaction($userId, $type, $amount, $newBalance, $pdo) {
+    try {
+        // Start transaction
+        $pdo->beginTransaction();
+        
+        // Update user balance
+        $updateSql = "UPDATE users SET balance = :balance WHERE id = :id";
+        $updateStmt = $pdo->prepare($updateSql);
+        $updateStmt->execute([
+            ':balance' => $newBalance,
+            ':id' => $userId
+        ]);
+        
+        // Record transaction in transactions table
+        $transactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) VALUES (:user_id, :type, :amount, :balance_after)";
+        $transactionStmt = $pdo->prepare($transactionSql);
+        $transactionStmt->execute([
+            ':user_id' => $userId,
+            ':type' => $type,
+            ':amount' => $amount,
+            ':balance_after' => $newBalance
+        ]);
+        
+        // Commit transaction
+        $pdo->commit();
+        return true;
+        
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        $pdo->rollback();
+        return false;
     }
 }
 }

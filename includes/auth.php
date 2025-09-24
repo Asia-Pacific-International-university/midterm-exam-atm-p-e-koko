@@ -1,9 +1,53 @@
 <?php
+// Authentication functions
 include "db.php"; // connect to database
 include "helpers.php"; // include helper functions
 
-$email = cleanInput($_POST['email']);
-$pin   = cleanInput($_POST['pin']);
+// Function to check if user is logged in
+function isLoggedIn() {
+    return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
+}
+
+// Function to require login - redirects to login page if not logged in
+function requireLogin($redirectTo = 'login.php') {
+    if (!isLoggedIn()) {
+        header("Location: $redirectTo");
+        exit;
+    }
+}
+
+// Function to get current user data
+function getCurrentUser($pdo) {
+    if (!isLoggedIn()) {
+        return null;
+    }
+    
+    $sql = "SELECT id, name, email, balance FROM users WHERE id = :id LIMIT 1";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([':id' => $_SESSION['user_id']]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+// Function to verify user exists and is valid
+function verifyUserSession($pdo) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+    
+    $user = getCurrentUser($pdo);
+    if (!$user) {
+        // User no longer exists in database, destroy session
+        session_destroy();
+        return false;
+    }
+    
+    return true;
+}
+
+// LOGIN PROCESSING CODE (when form is submitted)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email']) && isset($_POST['pin'])) {
+    $email = cleanInput($_POST['email']);
+    $pin   = cleanInput($_POST['pin']);
 
 // Fetch user by email including lock information
 $sql  = "SELECT id, name, email, pin, failed_attempts, lock_until FROM users WHERE email = :email LIMIT 1";
@@ -72,3 +116,5 @@ if ($user) {
     // Email not found
     $message = "Wrong username or password.";
 }
+}
+?>

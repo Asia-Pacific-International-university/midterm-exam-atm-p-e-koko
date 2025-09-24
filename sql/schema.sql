@@ -33,7 +33,7 @@ CREATE TABLE transactions (
 CREATE TABLE user_activities (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
-    activity_type ENUM('login', 'logout', 'failed_login', 'account_locked') NOT NULL,
+    activity_type ENUM('login', 'logout', 'failed_login', 'account_locked', 'deposit', 'withdraw') NOT NULL,
     description TEXT,
     ip_address VARCHAR(45),
     user_agent TEXT,
