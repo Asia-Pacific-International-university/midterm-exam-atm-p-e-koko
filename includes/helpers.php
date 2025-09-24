@@ -216,4 +216,104 @@ function processTransaction($userId, $type, $amount, $newBalance, $pdo) {
     }
 }
 }
+
+// Get user ID by email
+if (!function_exists('getUserByEmail')) {
+function getUserByEmail($email, $pdo) {
+    $sql = "SELECT id, name, balance FROM users WHERE email = :email LIMIT 1";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([':email' => $email]);
+    
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+}
+
+// Validate transfer parameters
+if (!function_exists('validateTransfer')) {
+function validateTransfer($senderEmail, $recipientEmail, $amount, $senderBalance) {
+    $errors = array();
+    
+    // Check if recipient email is provided and valid
+    if (empty($recipientEmail)) {
+        $errors[] = "Recipient email is required.";
+    } elseif (!validateEmail($recipientEmail)) {
+        $errors[] = "Please enter a valid recipient email address.";
+    }
+    
+    // Check if sender is trying to transfer to themselves
+    if ($senderEmail === $recipientEmail) {
+        $errors[] = "You cannot transfer money to yourself.";
+    }
+    
+    // Validate amount
+    if (empty($amount) || !is_numeric($amount) || $amount <= 0) {
+        $errors[] = "Please enter a valid amount greater than 0.";
+    } elseif ($amount > $senderBalance) {
+        $errors[] = "Insufficient balance. Current balance: $" . number_format($senderBalance, 2);
+    }
+    
+    return $errors;
+}
+}
+
+// Process transfer between users with atomic transaction
+if (!function_exists('processTransfer')) {
+function processTransfer($senderId, $recipientId, $amount, $senderNewBalance, $recipientNewBalance, $pdo) {
+    try {
+        // Start transaction
+        $pdo->beginTransaction();
+        
+        // Update sender balance
+        $updateSenderSql = "UPDATE users SET balance = :balance WHERE id = :id";
+        $updateSenderStmt = $pdo->prepare($updateSenderSql);
+        $updateSenderStmt->execute([
+            ':balance' => $senderNewBalance,
+            ':id' => $senderId
+        ]);
+        
+        // Update recipient balance
+        $updateRecipientSql = "UPDATE users SET balance = :balance WHERE id = :id";
+        $updateRecipientStmt = $pdo->prepare($updateRecipientSql);
+        $updateRecipientStmt->execute([
+            ':balance' => $recipientNewBalance,
+            ':id' => $recipientId
+        ]);
+        
+        // Record transaction for sender (transfer out)
+        $senderTransactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) VALUES (:user_id, :type, :amount, :balance_after)";
+        $senderTransactionStmt = $pdo->prepare($senderTransactionSql);
+        $senderTransactionStmt->execute([
+            ':user_id' => $senderId,
+            ':type' => 'transfer',
+            ':amount' => -$amount, // Negative for outgoing transfer
+            ':balance_after' => $senderNewBalance
+        ]);
+        
+        // Get the sender transaction ID
+        $senderTransactionId = $pdo->lastInsertId();
+        
+        // Record transaction for recipient (transfer in)
+        $recipientTransactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) VALUES (:user_id, :type, :amount, :balance_after)";
+        $recipientTransactionStmt = $pdo->prepare($recipientTransactionSql);
+        $recipientTransactionStmt->execute([
+            ':user_id' => $recipientId,
+            ':type' => 'transfer',
+            ':amount' => $amount, // Positive for incoming transfer
+            ':balance_after' => $recipientNewBalance
+        ]);
+        
+        // Get the recipient transaction ID
+        $recipientTransactionId = $pdo->lastInsertId();
+        
+        // Commit transaction
+        $pdo->commit();
+        return array('success' => true, 'sender_transaction_id' => $senderTransactionId, 'recipient_transaction_id' => $recipientTransactionId);
+        
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        $pdo->rollback();
+        return array('success' => false, 'error' => $e->getMessage());
+    }
+}
+}
 ?>
