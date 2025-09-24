@@ -12,6 +12,7 @@ CREATE TABLE users (
     email VARCHAR(100) NOT NULL UNIQUE,
     pin VARCHAR(255) NOT NULL,
     balance DECIMAL(10,2) NOT NULL DEFAULT 0,
+    role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
     failed_attempts INT NOT NULL DEFAULT 0,
     lock_until DATETIME DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -22,9 +23,11 @@ CREATE TABLE users (
 CREATE TABLE transactions (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
-    type ENUM('deposit','withdraw') NOT NULL,
+    type ENUM('deposit','withdraw','transfer') NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     balance_after DECIMAL(10,2) NOT NULL,
+    memo VARCHAR(255) DEFAULT NULL,
+    related_transaction_id INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );

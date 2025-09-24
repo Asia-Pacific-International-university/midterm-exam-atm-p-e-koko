@@ -38,16 +38,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $currentBalance = $user['balance'];
             
             if ($transactionType === 'deposit') {
-                // Process deposit
+                // Process deposit with atomic transaction
                 $newBalance = $currentBalance + $amount;
                 
-                if (processTransaction($_SESSION['user_id'], 'deposit', $amount, $newBalance, $pdo)) {
+                try {
+                    // BEGIN TRANSACTION
+                    $pdo->beginTransaction();
+                    
+                    // Update user balance
+                    $updateSql = "UPDATE users SET balance = :balance WHERE id = :id";
+                    $updateStmt = $pdo->prepare($updateSql);
+                    $updateStmt->execute([
+                        ':balance' => $newBalance,
+                        ':id' => $_SESSION['user_id']
+                    ]);
+                    
+                    // Record transaction in transactions table
+                    $transactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) VALUES (:user_id, :type, :amount, :balance_after)";
+                    $transactionStmt = $pdo->prepare($transactionSql);
+                    $transactionStmt->execute([
+                        ':user_id' => $_SESSION['user_id'],
+                        ':type' => 'deposit',
+                        ':amount' => $amount,
+                        ':balance_after' => $newBalance
+                    ]);
+                    
+                    // COMMIT TRANSACTION
+                    $pdo->commit();
+                    
                     $message = "Successfully deposited $" . number_format($amount, 2) . ". New balance: $" . number_format($newBalance, 2);
                     $messageType = "success";
                     
                     // Log activity
                     logActivity($_SESSION['user_id'], 'deposit', "Deposited $" . number_format($amount, 2), $pdo);
-                } else {
+                    
+                } catch (Exception $e) {
+                    // ROLLBACK TRANSACTION on error
+                    $pdo->rollback();
                     $message = "Transaction failed. Please try again.";
                     $messageType = "error";
                 }
@@ -58,16 +85,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = "Insufficient balance. Current balance: $" . number_format($currentBalance, 2);
                     $messageType = "error";
                 } else {
-                    // Process withdrawal
+                    // Process withdrawal with atomic transaction
                     $newBalance = $currentBalance - $amount;
                     
-                    if (processTransaction($_SESSION['user_id'], 'withdraw', $amount, $newBalance, $pdo)) {
+                    try {
+                        // BEGIN TRANSACTION
+                        $pdo->beginTransaction();
+                        
+                        // Update user balance
+                        $updateSql = "UPDATE users SET balance = :balance WHERE id = :id";
+                        $updateStmt = $pdo->prepare($updateSql);
+                        $updateStmt->execute([
+                            ':balance' => $newBalance,
+                            ':id' => $_SESSION['user_id']
+                        ]);
+                        
+                        // Record transaction in transactions table
+                        $transactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) VALUES (:user_id, :type, :amount, :balance_after)";
+                        $transactionStmt = $pdo->prepare($transactionSql);
+                        $transactionStmt->execute([
+                            ':user_id' => $_SESSION['user_id'],
+                            ':type' => 'withdraw',
+                            ':amount' => $amount,
+                            ':balance_after' => $newBalance
+                        ]);
+                        
+                        // COMMIT TRANSACTION
+                        $pdo->commit();
+                        
                         $message = "Successfully withdrew $" . number_format($amount, 2) . ". New balance: $" . number_format($newBalance, 2);
                         $messageType = "success";
                         
                         // Log activity
                         logActivity($_SESSION['user_id'], 'withdraw', "Withdrew $" . number_format($amount, 2), $pdo);
-                    } else {
+                        
+                    } catch (Exception $e) {
+                        // ROLLBACK TRANSACTION on error
+                        $pdo->rollback();
                         $message = "Transaction failed. Please try again.";
                         $messageType = "error";
                     }
