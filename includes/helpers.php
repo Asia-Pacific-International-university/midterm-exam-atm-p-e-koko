@@ -80,31 +80,6 @@ function getValidationErrors($name, $email, $pin) {
 }
 }
 
-// Log user activity
-if (!function_exists('logActivity')) {
-function logActivity($userId, $activityType, $description = null, $pdo = null) {
-    if (!$pdo) {
-        require_once 'db.php';
-        global $pdo;
-    }
-    
-    $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
-    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
-    
-    $sql = "INSERT INTO user_activities (user_id, activity_type, description, ip_address, user_agent) 
-            VALUES (:user_id, :activity_type, :description, :ip_address, :user_agent)";
-    
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([
-        ':user_id' => $userId,
-        ':activity_type' => $activityType,
-        ':description' => $description,
-        ':ip_address' => $ipAddress,
-        ':user_agent' => $userAgent
-    ]);
-}
-}
-
 // Get recent activities for a user
 if (!function_exists('getRecentActivities')) {
 function getRecentActivities($userId, $limit = 5, $pdo = null) {
@@ -125,6 +100,57 @@ function getRecentActivities($userId, $limit = 5, $pdo = null) {
     $stmt->execute();
     
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+}
+
+// Enhanced log_activity function for non-transactional events
+if (!function_exists('log_activity')) {
+function log_activity($userId, $activityType, $description = null, $pdo = null, $ipAddress = null, $userAgent = null) {
+    // Use global PDO if not provided
+    if (!$pdo) {
+        require_once 'db.php';
+        global $pdo;
+        if (!$pdo) {
+            return false; // Cannot log without database connection
+        }
+    }
+    
+    // Auto-detect IP and User Agent if not provided
+    if ($ipAddress === null) {
+        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? 'Unknown';
+    }
+    
+    if ($userAgent === null) {
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+    }
+    
+    try {
+        $sql = "INSERT INTO user_activities (user_id, activity_type, description, ip_address, user_agent) 
+                VALUES (:user_id, :activity_type, :description, :ip_address, :user_agent)";
+        
+        $stmt = $pdo->prepare($sql);
+        $result = $stmt->execute([
+            ':user_id' => $userId,
+            ':activity_type' => $activityType,
+            ':description' => $description,
+            ':ip_address' => $ipAddress,
+            ':user_agent' => $userAgent
+        ]);
+        
+        return $result;
+        
+    } catch (PDOException $e) {
+        // Log error but don't break the application
+        error_log("Activity logging failed: " . $e->getMessage());
+        return false;
+    }
+}
+}
+
+// Alias for backward compatibility - logActivity calls log_activity
+if (!function_exists('logActivity')) {
+function logActivity($userId, $activityType, $description = null, $pdo = null) {
+    return log_activity($userId, $activityType, $description, $pdo);
 }
 }
 
