@@ -22,10 +22,33 @@ function getCurrentUser($pdo) {
         return null;
     }
     
-    $sql = "SELECT id, name, email, balance FROM users WHERE id = :id LIMIT 1";
+    $sql = "SELECT id, name, email, balance, role FROM users WHERE id = :id LIMIT 1";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([':id' => $_SESSION['user_id']]);
     return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+// Function to check if current user has admin role
+function isAdmin($pdo) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+    
+    $user = getCurrentUser($pdo);
+    return $user && $user['role'] === 'admin';
+}
+
+// Function to require admin access - redirects if not admin
+function requireAdmin($pdo, $redirectTo = '../login.php') {
+    if (!isLoggedIn()) {
+        header("Location: $redirectTo");
+        exit;
+    }
+    
+    if (!isAdmin($pdo)) {
+        header("Location: ../dashboard.php?error=access_denied");
+        exit;
+    }
 }
 
 // Function to verify user exists and is valid
