@@ -154,6 +154,64 @@ function logActivity($userId, $activityType, $description = null, $pdo = null) {
 }
 }
 
+// Change user PIN securely
+if (!function_exists('changePIN')) {
+function changePIN($userId, $currentPin, $newPin, $pdo) {
+    // Validate new PIN format
+    if (!validatePin($newPin)) {
+        return ['success' => false, 'message' => 'New PIN must be 4-6 digits only.'];
+    }
+    
+    // Get current user data to verify current PIN
+    $sql = "SELECT pin FROM users WHERE id = :id LIMIT 1";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([':id' => $userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$user) {
+        return ['success' => false, 'message' => 'User not found.'];
+    }
+    
+    // Verify current PIN
+    if (!password_verify($currentPin, $user['pin'])) {
+        // Log failed PIN change attempt
+        log_activity($userId, 'failed_login', 'Failed PIN change attempt - wrong current PIN', $pdo);
+        return ['success' => false, 'message' => 'Current PIN is incorrect.'];
+    }
+    
+    // Check if new PIN is same as current PIN
+    if (password_verify($newPin, $user['pin'])) {
+        return ['success' => false, 'message' => 'New PIN must be different from current PIN.'];
+    }
+    
+    try {
+        // Hash new PIN
+        $hashedNewPin = password_hash($newPin, PASSWORD_DEFAULT);
+        
+        // Update PIN in database
+        $updateSql = "UPDATE users SET pin = :new_pin WHERE id = :id";
+        $updateStmt = $pdo->prepare($updateSql);
+        $result = $updateStmt->execute([
+            ':new_pin' => $hashedNewPin,
+            ':id' => $userId
+        ]);
+        
+        if ($result) {
+            // Log successful PIN change
+            log_activity($userId, 'login', 'PIN changed successfully', $pdo);
+            return ['success' => true, 'message' => 'PIN changed successfully.'];
+        } else {
+            return ['success' => false, 'message' => 'Failed to update PIN. Please try again.'];
+        }
+        
+    } catch (PDOException $e) {
+        // Log error
+        error_log("PIN change failed for user $userId: " . $e->getMessage());
+        return ['success' => false, 'message' => 'Database error. Please try again later.'];
+    }
+}
+}
+
 // Format activity type for display
 if (!function_exists('formatActivityType')) {
 function formatActivityType($activityType) {

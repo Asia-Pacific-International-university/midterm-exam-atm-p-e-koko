@@ -89,6 +89,9 @@ $recentActivities = getRecentActivities($_SESSION['user_id'], 5, $pdo);
                         <ul class="dropdown-menu">
                             <li><h6 class="dropdown-header">Welcome back!</h6></li>
                             <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="pin_change.php">
+                                <i class="fas fa-key"></i> Change PIN
+                            </a></li>
                             <li><a class="dropdown-item" href="logout.php">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </a></li>
