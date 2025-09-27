@@ -7,7 +7,7 @@
     
     // Log logout activity if user was logged in
     if (isset($_SESSION['user_id'])) {
-        logActivity($_SESSION['user_id'], 'logout', 'User logged out', $pdo);
+        log_activity($_SESSION['user_id'], 'logout', 'User logged out', $pdo);
     }
 
     // Clear all session data
