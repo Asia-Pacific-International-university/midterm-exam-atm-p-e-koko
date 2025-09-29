@@ -99,6 +99,9 @@ if ($user) {
         
         // Log successful login
         logActivity($user['id'], 'login', 'Successful login from ' . ($_SERVER['REMOTE_ADDR'] ?? 'Unknown IP'), $pdo);
+        
+        // Log successful login
+        logActivity($user['id'], 'login', 'Successful login from ' . ($_SERVER['REMOTE_ADDR'] ?? 'Unknown IP'), $pdo);
 
         header("Location: dashboard.php");
         exit; // stop execution after redirect

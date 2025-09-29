@@ -43,6 +43,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_name'] = $user['name'];
                 
+                // Generate CSRF token for security (ensures token is available for all forms)
+                generateCSRFToken();
+                
                 // Log successful login using new logger
                 log_activity($user['id'], 'login', 'Successful login from ' . ($_SERVER['REMOTE_ADDR'] ?? 'Unknown IP'), $pdo);
                 

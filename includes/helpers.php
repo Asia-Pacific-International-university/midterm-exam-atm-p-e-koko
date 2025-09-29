@@ -735,4 +735,86 @@ function validateTransferWithRateLimits($senderId, $senderEmail, $recipientId, $
     return $errors;
 }
 }
+
+// CSRF Token Helper Functions
+
+// Generate a CSRF token and store it in the session
+if (!function_exists('generateCSRFToken')) {
+function generateCSRFToken() {
+    // Start session if not already started
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Generate a random token using bin2hex and random_bytes for security
+    $token = bin2hex(random_bytes(32));
+    
+    // Store the token in the session
+    $_SESSION['csrf_token'] = $token;
+    
+    return $token;
+}
+}
+
+// Validate CSRF token from form submission against session token
+if (!function_exists('validateCSRFToken')) {
+function validateCSRFToken($submittedToken = null) {
+    // Start session if not already started
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // If no token is provided, try to get it from POST data
+    if ($submittedToken === null) {
+        $submittedToken = $_POST['csrf_token'] ?? '';
+    }
+    
+    // Check if session has a CSRF token
+    if (!isset($_SESSION['csrf_token']) || empty($_SESSION['csrf_token'])) {
+        return false;
+    }
+    
+    // Validate the submitted token matches the session token
+    return hash_equals($_SESSION['csrf_token'], $submittedToken);
+}
+}
+
+// Generate CSRF token input field for forms
+if (!function_exists('getCSRFTokenField')) {
+function getCSRFTokenField() {
+    $token = generateCSRFToken();
+    return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">';
+}
+}
+
+// Get current CSRF token (generate if doesn't exist)
+if (!function_exists('getCSRFToken')) {
+function getCSRFToken() {
+    // Start session if not already started
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Return existing token or generate new one
+    if (isset($_SESSION['csrf_token']) && !empty($_SESSION['csrf_token'])) {
+        return $_SESSION['csrf_token'];
+    } else {
+        return generateCSRFToken();
+    }
+}
+}
+
+// Regenerate CSRF token (useful after successful form submission)
+if (!function_exists('regenerateCSRFToken')) {
+function regenerateCSRFToken() {
+    // Start session if not already started
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Clear existing token and generate a new one
+    unset($_SESSION['csrf_token']);
+    return generateCSRFToken();
+}
+}
 ?>
