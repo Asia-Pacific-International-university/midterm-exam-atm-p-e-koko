@@ -1,15 +1,6 @@
-/* ---------------- General body styles ---------------- */
-body {
-    font-family: Arial, sans-serif;
-    background: #f0f2f5;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
+/* ---------------- Custom styles for Bootstrap integration ---------------- */
 
-/* ----- Dashboard page overrides (do not affect forms) ----- */
+/* Dashboard specific styles (for pages not yet converted to Bootstrap) */
 body.dashboard-page {
     background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 60%, #f1f5f9 100%);
     display: block;
@@ -17,29 +8,29 @@ body.dashboard-page {
     min-height: 100vh;
 }
 
-/* ---------------- Form container ---------------- */
-form {
+/* Legacy form styles for non-Bootstrap forms */
+.legacy-form {
     background: #ffffff;
     padding: 30px 40px;
     border-radius: 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     width: 300px;
+    margin: 0 auto;
 }
 
-h2 {
+.legacy-form h2 {
     text-align: center;
     margin-bottom: 20px;
     color: #333;
 }
 
-/* Labels and inputs */
-label {
+.legacy-form label {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
 }
 
-input {
+.legacy-form input {
     width: 100%;
     padding: 10px;
     margin-bottom: 15px;
@@ -48,7 +39,7 @@ input {
     box-sizing: border-box;
 }
 
-button {
+.legacy-form button {
     width: 100%;
     padding: 10px;
     background-color: #4CAF50;
@@ -59,8 +50,132 @@ button {
     cursor: pointer;
 }
 
-button:hover {
+.legacy-form button:hover {
     background-color: #45a049;
+}
+
+/* Custom brand styling for Bootstrap navbar */
+.navbar-brand .fs-2 {
+    color: #ffd700 !important;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+/* Enhanced card shadows */
+.shadow-enhanced {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Custom alert styling */
+.alert {
+    border: none;
+    border-radius: 10px;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-left: 4px solid #28a745;
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-left: 4px solid #dc3545;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #cce7ff 0%, #b8daff 100%);
+    border-left: 4px solid #007bff;
+}
+
+/* Enhanced form styling */
+.form-control-lg {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control-lg:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.input-group-text {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #e9ecef;
+    border-radius: 10px 0 0 10px;
+    font-weight: 600;
+}
+
+/* Custom button styling */
+.btn-lg {
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0b5ed7 0%, #0a58ca 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.4);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
+}
+
+/* Enhanced card styling */
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+    border-bottom: none;
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+}
+
+/* Icon styling */
+.fas, .far {
+    width: 16px;
+    text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-nav {
+        flex-direction: column !important;
+        align-items: center;
+    }
+    
+    .navbar-nav .nav-link {
+        margin: 0.25rem 0 !important;
+    }
+    
+    .col-lg-8 {
+        padding: 0 15px;
+    }
 }
 
 /* ---------------- Dashboard Page ---------------- */

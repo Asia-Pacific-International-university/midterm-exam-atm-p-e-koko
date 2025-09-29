@@ -561,4 +561,178 @@ function getDailyWithdrawalTotal($userId, $pdo) {
     }
 }
 }
+
+// Calculate total transfers sent by a user within the last 24 hours (daily limit check)
+if (!function_exists('getDailyTransferTotal')) {
+function getDailyTransferTotal($userId, $pdo) {
+    try {
+        // Calculate the timestamp 24 hours ago
+        $twentyFourHoursAgo = date('Y-m-d H:i:s', strtotime('-24 hours'));
+        
+        // Debug: Log the query parameters
+        error_log("getDailyTransferTotal - User: $userId, Looking from: $twentyFourHoursAgo");
+        
+        $sql = "SELECT COALESCE(SUM(ABS(amount)), 0) as total_transferred 
+                FROM transactions 
+                WHERE user_id = :user_id 
+                AND type = 'transfer' 
+                AND amount < 0
+                AND created_at >= :twenty_four_hours_ago";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':twenty_four_hours_ago' => $twentyFourHoursAgo
+        ]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $total = floatval($result['total_transferred']);
+        
+        // Debug: Log the result
+        error_log("getDailyTransferTotal - Result: $total");
+        
+        return $total;
+        
+    } catch (PDOException $e) {
+        error_log("Error calculating daily transfer total: " . $e->getMessage());
+        return 0; // Return 0 if there's an error to allow system to continue
+    }
+}
+}
+
+// Count transfers to a specific recipient within the last hour (frequency limit check)
+if (!function_exists('getHourlyTransferCountToRecipient')) {
+function getHourlyTransferCountToRecipient($senderId, $recipientId, $pdo) {
+    try {
+        // Calculate the timestamp 1 hour ago (3600 seconds)
+        $oneHourAgo = date('Y-m-d H:i:s', strtotime('-3600 seconds'));
+        
+        // Check activity log for transfers to specific recipient
+        $sql = "SELECT COUNT(*) as transfer_count 
+                FROM user_activities 
+                WHERE user_id = :sender_id 
+                AND activity_type = 'withdraw'
+                AND description LIKE CONCAT('%to recipient ID: ', :recipient_id, '%')
+                AND created_at >= :one_hour_ago";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':sender_id' => $senderId,
+            ':recipient_id' => $recipientId,
+            ':one_hour_ago' => $oneHourAgo
+        ]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return intval($result['transfer_count']);
+        
+    } catch (PDOException $e) {
+        error_log("Error calculating hourly transfer count: " . $e->getMessage());
+        return 0; // Return 0 if there's an error to allow system to continue
+    }
+}
+}
+
+// Check if user has exceeded daily transfer limit ($5000/day)
+if (!function_exists('checkDailyTransferLimit')) {
+function checkDailyTransferLimit($userId, $transferAmount, $pdo) {
+    $dailyLimit = 5000.00; // $5000 daily limit
+    $currentDailyTotal = getDailyTransferTotal($userId, $pdo);
+    $newTotal = $currentDailyTotal + $transferAmount;
+    
+    // Debug: Log the values for troubleshooting
+    error_log("Daily Transfer Check - User: $userId, Current Total: $currentDailyTotal, New Amount: $transferAmount, New Total: $newTotal, Limit: $dailyLimit");
+    
+    if ($newTotal > $dailyLimit) {
+        return [
+            'allowed' => false,
+            'message' => sprintf(
+                'Daily transfer limit exceeded. You have transferred $%.2f today. Limit: $%.2f. This transfer of $%.2f would exceed your daily limit by $%.2f.',
+                $currentDailyTotal,
+                $dailyLimit,
+                $transferAmount,
+                $newTotal - $dailyLimit
+            ),
+            'current_total' => $currentDailyTotal,
+            'daily_limit' => $dailyLimit
+        ];
+    }
+    
+    return [
+        'allowed' => true,
+        'current_total' => $currentDailyTotal,
+        'daily_limit' => $dailyLimit,
+        'remaining' => $dailyLimit - $newTotal
+    ];
+}
+}
+
+// Check if user has exceeded hourly transfer frequency to the same recipient (5 transfers/hour)
+if (!function_exists('checkRecipientTransferFrequency')) {
+function checkRecipientTransferFrequency($senderId, $recipientId, $pdo) {
+    $hourlyLimit = 5; // Maximum 5 transfers per hour to same recipient
+    $currentHourlyCount = getHourlyTransferCountToRecipient($senderId, $recipientId, $pdo);
+    
+    if ($currentHourlyCount >= $hourlyLimit) {
+        return [
+            'allowed' => false,
+            'message' => sprintf(
+                'Transfer frequency limit exceeded. You have already made %d transfers to this recipient in the last hour. Please wait before making another transfer to the same person.',
+                $currentHourlyCount
+            ),
+            'current_count' => $currentHourlyCount,
+            'hourly_limit' => $hourlyLimit
+        ];
+    }
+    
+    return [
+        'allowed' => true,
+        'current_count' => $currentHourlyCount,
+        'hourly_limit' => $hourlyLimit,
+        'remaining' => $hourlyLimit - $currentHourlyCount - 1
+    ];
+}
+}
+
+// Enhanced transfer validation with rate limiting
+// Implements two key restrictions:
+// 1. Daily limit: Cannot transfer more than $5000 in a 24-hour period
+// 2. Recipient frequency limit: Cannot transfer to the same person more than 5 times in an hour (3600 seconds)
+if (!function_exists('validateTransferWithRateLimits')) {
+function validateTransferWithRateLimits($senderId, $senderEmail, $recipientId, $recipientEmail, $amount, $senderBalance, $pdo) {
+    // Debug: Log that validation is being called
+    error_log("validateTransferWithRateLimits called - Sender: $senderId, Recipient: $recipientId, Amount: $amount");
+    
+    // First do basic validation
+    $basicErrors = validateTransfer($senderEmail, $recipientEmail, $amount, $senderBalance);
+    
+    if (!empty($basicErrors)) {
+        error_log("Basic validation failed: " . implode(", ", $basicErrors));
+        return $basicErrors;
+    }
+    
+    $errors = array();
+    $amount = floatval($amount);
+    
+    // Check daily transfer limit
+    $dailyCheck = checkDailyTransferLimit($senderId, $amount, $pdo);
+    if (!$dailyCheck['allowed']) {
+        error_log("Daily limit check failed: " . $dailyCheck['message']);
+        $errors[] = $dailyCheck['message'];
+    } else {
+        error_log("Daily limit check passed - remaining: " . $dailyCheck['remaining']);
+    }
+    
+    // Check hourly frequency limit to recipient
+    $frequencyCheck = checkRecipientTransferFrequency($senderId, $recipientId, $pdo);
+    if (!$frequencyCheck['allowed']) {
+        error_log("Frequency limit check failed: " . $frequencyCheck['message']);
+        $errors[] = $frequencyCheck['message'];
+    } else {
+        error_log("Frequency limit check passed - remaining: " . $frequencyCheck['remaining']);
+    }
+    
+    error_log("validateTransferWithRateLimits returning " . count($errors) . " errors");
+    return $errors;
+}
+}
 ?>
