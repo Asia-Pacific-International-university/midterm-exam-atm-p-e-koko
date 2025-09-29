@@ -7,13 +7,17 @@ $message = ""; // store messages
 $errors = array(); // store validation errors
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Get and clean input data
-    $name  = cleanInput($_POST['name']);
-    $email = cleanInput($_POST['email']);
-    $pin   = cleanInput($_POST['pin']);
-    
-    // Validate all inputs
-    $errors = getValidationErrors($name, $email, $pin);
+    // Validate CSRF token
+    if (!validateCSRFToken()) {
+        $errors[] = "Security token validation failed. Please try again.";
+    } else {
+        // Get and clean input data
+        $name  = cleanInput($_POST['name']);
+        $email = cleanInput($_POST['email']);
+        $pin   = cleanInput($_POST['pin']);
+        
+        // Validate all inputs
+        $errors = getValidationErrors($name, $email, $pin);
     
     // Check if email already exists
     if (empty($errors) && emailExists($email, $pdo)) {
@@ -37,6 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $errors[] = "❌ Registration failed. Please try again.";
         }
     }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -49,6 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <form action="register.php" method="POST">
+        <?php echo getCSRFTokenField(); ?>
         <h2>Register</h2>
         <?php if ($message != ""): ?>
             <p style="color: green; text-align:center;"><?php echo $message; ?></p>

@@ -23,6 +23,13 @@ if (!isset($_SESSION['user_id']) || !verifyUserSession($pdo)) {
     exit;
 }
 
+// Validate CSRF token
+if (!validateCSRFToken()) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Security token validation failed']);
+    exit;
+}
+
 try {
     // Get JSON input
     $input = json_decode(file_get_contents('php://input'), true);

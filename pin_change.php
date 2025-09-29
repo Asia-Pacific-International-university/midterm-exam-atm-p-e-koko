@@ -18,9 +18,13 @@ $messageType = 'danger'; // Bootstrap alert type (success, danger, warning, info
 
 // Handle PIN change form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $currentPin = cleanInput($_POST['current_pin']);
-    $newPin = cleanInput($_POST['new_pin']);
-    $confirmPin = cleanInput($_POST['confirm_pin']);
+    // Validate CSRF token
+    if (!validateCSRFToken()) {
+        $message = 'Security token validation failed. Please try again.';
+    } else {
+        $currentPin = cleanInput($_POST['current_pin']);
+        $newPin = cleanInput($_POST['new_pin']);
+        $confirmPin = cleanInput($_POST['confirm_pin']);
     
     // Basic validation
     if (empty($currentPin) || empty($newPin) || empty($confirmPin)) {
@@ -46,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $message = $result['message'];
         }
+    }
     }
 }
 
@@ -156,6 +161,7 @@ $initial = strtoupper(substr($name, 0, 1));
                         <?php endif; ?>
 
                         <form method="POST" action="pin_change.php">
+                            <?php echo getCSRFTokenField(); ?>
                             <div class="mb-3">
                                 <label for="current_pin" class="form-label">
                                     <i class="fas fa-lock me-2"></i>Current PIN

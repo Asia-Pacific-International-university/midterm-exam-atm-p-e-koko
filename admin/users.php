@@ -4,6 +4,12 @@ include "auth_admin.php";
 
 // Handle POST actions (lock/unlock users)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Validate CSRF token
+    if (!validateCSRFToken()) {
+        header("Location: users.php?error=csrf_failed");
+        exit;
+    }
+    
     if (isset($_POST['action']) && isset($_POST['user_id'])) {
         $userId = (int)$_POST['user_id'];
         $action = $_POST['action'];
@@ -332,6 +338,7 @@ if (isset($_GET['error'])) {
                                         <?php if ($viewUser['role'] !== 'admin'): ?>
                                             <?php if (isUserLocked($viewUser)): ?>
                                                 <form method="POST" class="d-inline">
+                                                    <?php echo getCSRFTokenField(); ?>
                                                     <input type="hidden" name="user_id" value="<?php echo $viewUser['id']; ?>">
                                                     <input type="hidden" name="action" value="unlock">
                                                     <button type="submit" class="btn btn-success btn-sm" 
@@ -341,6 +348,7 @@ if (isset($_GET['error'])) {
                                                 </form>
                                             <?php else: ?>
                                                 <form method="POST" class="d-inline">
+                                                    <?php echo getCSRFTokenField(); ?>
                                                     <input type="hidden" name="user_id" value="<?php echo $viewUser['id']; ?>">
                                                     <input type="hidden" name="action" value="lock">
                                                     <button type="submit" class="btn btn-danger btn-sm" 
@@ -496,6 +504,7 @@ if (isset($_GET['error'])) {
                                                     <?php if ($user['role'] !== 'admin'): ?>
                                                         <?php if (isUserLocked($user)): ?>
                                                             <form method="POST" class="d-inline">
+                                                                <?php echo getCSRFTokenField(); ?>
                                                                 <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
                                                                 <input type="hidden" name="action" value="unlock">
                                                                 <button type="submit" class="btn btn-outline-success btn-sm" 
@@ -505,6 +514,7 @@ if (isset($_GET['error'])) {
                                                             </form>
                                                         <?php else: ?>
                                                             <form method="POST" class="d-inline">
+                                                                <?php echo getCSRFTokenField(); ?>
                                                                 <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
                                                                 <input type="hidden" name="action" value="lock">
                                                                 <button type="submit" class="btn btn-outline-danger btn-sm" 

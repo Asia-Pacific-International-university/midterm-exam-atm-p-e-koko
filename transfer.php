@@ -18,8 +18,13 @@ $messageType = "";
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $recipientEmail = cleanInput($_POST['recipient_email']);
-    $amount = cleanInput($_POST['amount']);
+    // Validate CSRF token
+    if (!validateCSRFToken()) {
+        $message = "Security token validation failed. Please try again.";
+        $messageType = "error";
+    } else {
+        $recipientEmail = cleanInput($_POST['recipient_email']);
+        $amount = cleanInput($_POST['amount']);
     
     // Get sender information
     $senderSql = "SELECT id, email, balance, name FROM users WHERE id = :id LIMIT 1";
@@ -95,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+    }
     }
 }
 
@@ -211,6 +217,7 @@ $remainingDaily = $dailyLimit - $currentDailyTotal;
 
                         <!-- Transfer Form -->
                         <form method="POST" action="transfer.php">
+                            <?php echo getCSRFTokenField(); ?>
                             <div class="mb-3">
                                 <label for="recipient_email" class="form-label">
                                     <i class="fas fa-envelope me-2"></i>Recipient Email Address

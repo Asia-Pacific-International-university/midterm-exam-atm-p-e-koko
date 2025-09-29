@@ -133,6 +133,7 @@ $dailyWithdrawalLimit = 1000.00;
 
                         <!-- Transaction Form -->
                         <form id="transactionForm">
+                            <?php echo getCSRFTokenField(); ?>
                             <div class="mb-3">
                                 <label for="transaction_type" class="form-label">
                                     <i class="fas fa-tags"></i> Transaction Type
@@ -276,7 +277,8 @@ $dailyWithdrawalLimit = 1000.00;
                 },
                 body: JSON.stringify({
                     transaction_type: type,
-                    amount: parseFloat(amount)
+                    amount: parseFloat(amount),
+                    csrf_token: document.querySelector('input[name="csrf_token"]').value
                 })
             })
             .then(response => {

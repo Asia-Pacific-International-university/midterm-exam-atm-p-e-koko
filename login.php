@@ -12,12 +12,16 @@ if (isset($_SESSION['user_id'])) {
 $message = ""; // store error messages
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Clean input
-    $email = cleanInput($_POST['email']);
-    $pin   = cleanInput($_POST['pin']);
-    
-    // Basic input check (not showing specific errors for security)
-    if (!empty($email) && !empty($pin)) {
+    // Validate CSRF token
+    if (!validateCSRFToken()) {
+        $message = "Security token validation failed. Please try again.";
+    } else {
+        // Clean input
+        $email = cleanInput($_POST['email']);
+        $pin   = cleanInput($_POST['pin']);
+        
+        // Basic input check (not showing specific errors for security)
+        if (!empty($email) && !empty($pin)) {
         // Fetch user by email including lock information
         $sql = "SELECT id, name, email, pin, failed_attempts, lock_until FROM users WHERE email = :email LIMIT 1";
         $stmt = $pdo->prepare($sql);
@@ -89,8 +93,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Email not found
             $message = "Wrong username or password.";
         }
-    } else {
-        $message = "Please enter both email and PIN.";
+        } else {
+            $message = "Please enter both email and PIN.";
+        }
     }
 }
 ?>
@@ -104,6 +109,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <form action="login.php" method="POST">
+        <?php echo getCSRFTokenField(); ?>
         <h2>Login</h2>
         <?php if ($message != ""): ?>
             <p style="color: red; text-align:center;"><?php echo $message; ?></p>
