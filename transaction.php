@@ -26,6 +26,10 @@ if (!$user) {
 
 $currentBalance = $user['balance'];
 $userName = $user['name'];
+
+// Get daily withdrawal total for limit checking
+$dailyWithdrawalTotal = getDailyWithdrawalTotal($_SESSION['user_id'], $pdo);
+$dailyWithdrawalLimit = 1000.00;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -100,6 +104,27 @@ $userName = $user['name'];
                             </div>
                         </div>
 
+                        <!-- Daily Withdrawal Limit Display -->
+                        <div class="alert alert-warning d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <div>
+                                <strong>Daily Withdrawal Status:</strong>
+                                <span class="h6 mb-0 ms-2">
+                                    $<?php echo number_format($dailyWithdrawalTotal, 2); ?> / $<?php echo number_format($dailyWithdrawalLimit, 2); ?>
+                                </span>
+                                <small class="d-block text-muted">
+                                    <?php 
+                                    $remaining = $dailyWithdrawalLimit - $dailyWithdrawalTotal;
+                                    if ($remaining > 0) {
+                                        echo "Remaining today: $" . number_format($remaining, 2);
+                                    } else {
+                                        echo "Daily limit reached. Try again tomorrow.";
+                                    }
+                                    ?>
+                                </small>
+                            </div>
+                        </div>
+
                         <!-- Message Area -->
                         <div id="messageArea" class="alert alert-dismissible fade show d-none" role="alert">
                             <div id="messageContent"></div>
@@ -171,15 +196,18 @@ $userName = $user['name'];
             const transactionType = document.getElementById('transaction_type');
             const amountInput = document.getElementById('amount');
             const currentBalance = <?php echo $currentBalance; ?>;
+            const dailyWithdrawalTotal = <?php echo $dailyWithdrawalTotal; ?>;
+            const dailyWithdrawalLimit = <?php echo $dailyWithdrawalLimit; ?>;
 
             // Form submission handler
             if (transactionForm) {
                 transactionForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
+                    e.preventDefault(); // Always prevent default form submission
                     
                     const type = transactionType.value;
                     const amount = amountInput.value;
                     
+                    // Basic client-side validation - only check for required fields
                     if (!type) {
                         showTransactionMessage('Please select a transaction type', 'error');
                         return;
@@ -190,13 +218,8 @@ $userName = $user['name'];
                         return;
                     }
                     
-                    // Check withdraw limit
-                    if (type === 'withdraw' && parseFloat(amount) > currentBalance) {
-                        showTransactionMessage(`Insufficient balance. Current balance: $${currentBalance.toFixed(2)}`, 'error');
-                        return;
-                    }
-                    
-                    // Process transaction via AJAX
+                    // Let server handle all other validation including balance and daily limits
+                    // This will show proper error messages via AJAX response
                     processTransactionAPI(type, amount);
                 });
             }
@@ -204,27 +227,33 @@ $userName = $user['name'];
             // Update amount input max value based on transaction type
             transactionType.addEventListener('change', function() {
                 if (this.value === 'withdraw') {
-                    amountInput.setAttribute('max', currentBalance);
-                    amountInput.setAttribute('placeholder', `Max: $${currentBalance.toFixed(2)}`);
+                    const remainingDailyLimit = dailyWithdrawalLimit - dailyWithdrawalTotal;
+                    const maxWithdraw = Math.min(currentBalance, remainingDailyLimit);
+                    
+                    // Remove restrictions - let users enter any amount and show errors via UI
+                    amountInput.removeAttribute('max');
+                    amountInput.disabled = false;
+                    
+                    if (remainingDailyLimit <= 0) {
+                        amountInput.setAttribute('placeholder', 'Daily limit reached - but you can still try');
+                    } else {
+                        amountInput.setAttribute('placeholder', `Balance: $${currentBalance.toFixed(2)}, Daily limit remaining: $${remainingDailyLimit.toFixed(2)}`);
+                    }
                 } else {
                     amountInput.removeAttribute('max');
                     amountInput.setAttribute('placeholder', 'Enter amount');
+                    amountInput.disabled = false;
                 }
             });
         });
 
         // Quick transaction function
         function quickTransaction(type, amount) {
-            if (type === 'withdraw' && amount > <?php echo $currentBalance; ?>) {
-                showTransactionMessage('Insufficient balance for this quick transaction', 'error');
-                return;
-            }
-            
             // Set form values
             document.getElementById('transaction_type').value = type;
             document.getElementById('amount').value = amount;
             
-            // Process transaction
+            // Process transaction - let server handle all validation and show errors via UI
             processTransactionAPI(type, amount);
         }
 
@@ -251,9 +280,8 @@ $userName = $user['name'];
                 })
             })
             .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                // Don't throw error for HTTP status codes like 400
+                // Let the JSON response handle success/failure
                 return response.json();
             })
             .then(data => {
@@ -266,10 +294,16 @@ $userName = $user['name'];
                     // Clear form
                     document.getElementById('transactionForm').reset();
                     
-                    // Update current balance variable for future checks
-                    window.currentBalance = data.data.new_balance;
+                    // For withdrawal transactions, refresh the page to update daily withdrawal status
+                    if (type === 'withdraw') {
+                        setTimeout(() => {
+                            showTransactionMessage('Refreshing page to update daily withdrawal status...', 'loading');
+                            window.location.reload();
+                        }, 2000);
+                    }
                     
                 } else {
+                    // Show server-side validation errors (including daily limit errors)
                     showTransactionMessage(data.message || 'Transaction failed', 'error');
                 }
             })

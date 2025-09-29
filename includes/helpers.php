@@ -532,4 +532,33 @@ function getTransactionClass($type, $amount = 0) {
     }
 }
 }
+
+// Calculate total withdrawals for a user within the last 24 hours
+if (!function_exists('getDailyWithdrawalTotal')) {
+function getDailyWithdrawalTotal($userId, $pdo) {
+    try {
+        // Calculate the timestamp 24 hours ago
+        $twentyFourHoursAgo = date('Y-m-d H:i:s', strtotime('-24 hours'));
+        
+        $sql = "SELECT COALESCE(SUM(amount), 0) as total_withdrawn 
+                FROM transactions 
+                WHERE user_id = :user_id 
+                AND type = 'withdraw' 
+                AND created_at >= :twenty_four_hours_ago";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':twenty_four_hours_ago' => $twentyFourHoursAgo
+        ]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return floatval($result['total_withdrawn']);
+        
+    } catch (PDOException $e) {
+        error_log("Error calculating daily withdrawal total: " . $e->getMessage());
+        return 0; // Return 0 if there's an error to allow system to continue
+    }
+}
+}
 ?>

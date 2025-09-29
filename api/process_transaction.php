@@ -122,6 +122,22 @@ try {
             throw new Exception("Insufficient balance. Current balance: $" . number_format($currentBalance, 2));
         }
         
+        // Check daily withdrawal limit
+        $dailyWithdrawalTotal = getDailyWithdrawalTotal($_SESSION['user_id'], $pdo);
+        $dailyWithdrawalLimit = 1000.00;
+        
+        $totalAfterWithdrawal = $dailyWithdrawalTotal + $amount;
+        
+        if ($totalAfterWithdrawal > $dailyWithdrawalLimit) {
+            $remainingLimit = $dailyWithdrawalLimit - $dailyWithdrawalTotal;
+            
+            if ($remainingLimit <= 0) {
+                throw new Exception("Daily withdrawal limit of $" . number_format($dailyWithdrawalLimit, 2) . " exceeded. You have already withdrawn $" . number_format($dailyWithdrawalTotal, 2) . " in the last 24 hours. Please try again tomorrow.");
+            } else {
+                throw new Exception("Daily withdrawal limit of $" . number_format($dailyWithdrawalLimit, 2) . " exceeded. You can only withdraw $" . number_format($remainingLimit, 2) . " more today (already withdrawn $" . number_format($dailyWithdrawalTotal, 2) . " in the last 24 hours).");
+            }
+        }
+        
         // Process withdrawal
         $newBalance = $currentBalance - $amount;
         
