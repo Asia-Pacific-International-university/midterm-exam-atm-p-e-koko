@@ -40,16 +40,34 @@ document.addEventListener('DOMContentLoaded', function() {
         showMessage('Processing transaction...', 'loading');
         
         // Disable form buttons during processing
-        const buttons = document.querySelectorAll('.quick-transaction-forms button');
-        buttons.forEach(btn => {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-        });
+        const depositBtn = depositForm ? depositForm.querySelector('button[type="submit"]') : null;
+        const withdrawBtn = withdrawForm ? withdrawForm.querySelector('button[type="submit"]') : null;
+        
+        if (type === 'deposit' && depositBtn) {
+            depositBtn.disabled = true;
+            depositBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        }
+        if (type === 'withdraw' && withdrawBtn) {
+            withdrawBtn.disabled = true;
+            withdrawBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        }
+
+        // Get CSRF token from the appropriate form
+        const formId = type === 'deposit' ? 'depositForm' : 'withdrawForm';
+        const form = document.getElementById(formId);
+        const csrfInput = form ? form.querySelector('input[name="csrf_token"]') : null;
+        const csrfToken = csrfInput ? csrfInput.value : '';
+
+        // Validate CSRF token exists (optional for now)
+        if (!csrfToken) {
+            console.warn('CSRF token not found, proceeding without it');
+        }
 
         // Prepare data for API
         const transactionData = {
             transaction_type: type,
-            amount: parseFloat(amount)
+            amount: parseFloat(amount),
+            csrf_token: csrfToken
         };
 
         // Make AJAX request
@@ -61,19 +79,19 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify(transactionData)
         })
         .then(response => {
-            // Check if response is ok
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
+            // Always try to parse the JSON response, even for error status codes
+            return response.json().then(data => {
+                // Return both response status and parsed data
+                return { ok: response.ok, status: response.status, data: data };
+            });
         })
-        .then(data => {
-            if (data.success) {
+        .then(result => {
+            if (result.ok && result.data.success) {
                 // Transaction successful
-                showMessage(data.message, 'success');
+                showMessage(result.data.message, 'success');
                 
                 // Update balance display
-                updateBalance(data.data.formatted_new_balance);
+                updateBalance(result.data.data.formatted_new_balance);
                 
                 // Clear form
                 document.getElementById(type + '_amount').value = '';
@@ -82,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (type === 'deposit') {
                     const withdrawInput = document.getElementById('withdraw_amount');
                     if (withdrawInput) {
-                        withdrawInput.setAttribute('max', data.data.new_balance);
+                        withdrawInput.setAttribute('max', result.data.data.new_balance);
                     }
                 }
                 
@@ -92,8 +110,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 1000);
                 
             } else {
-                // Transaction failed
-                showMessage(data.message || 'Transaction failed', 'error');
+                // Transaction failed - show the specific API error message
+                const errorMessage = result.data.message || 'Transaction failed';
+                showMessage(errorMessage, 'error');
+                
+                // For withdrawal limit errors, add helpful information
+                if (errorMessage.includes('withdrawal limit') || errorMessage.includes('limit exceeded')) {
+                    setTimeout(() => {
+                        showMessage('💡 Tip: You can try depositing money or wait until tomorrow to withdraw again.', 'info');
+                    }, 3000);
+                }
             }
         })
         .catch(error => {
@@ -129,6 +155,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 case 'loading':
                     messageArea.classList.add('alert-info');
                     break;
+                case 'info':
+                    messageArea.classList.add('alert-primary');
+                    break;
+                case 'warning':
+                    messageArea.classList.add('alert-warning');
+                    break;
                 default:
                     messageArea.classList.add('alert-secondary');
             }
@@ -136,11 +168,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Remove d-none class to show the alert
             messageArea.classList.remove('d-none');
             
-            // Auto-hide success and error messages after 5 seconds
+            // Auto-hide messages after delay (errors stay longer)
             if (type !== 'loading') {
+                const hideDelay = type === 'error' ? 8000 : 5000; // Show errors longer
                 setTimeout(() => {
                     hideMessage();
-                }, 5000);
+                }, hideDelay);
             }
         }
     }
@@ -181,17 +214,17 @@ document.addEventListener('DOMContentLoaded', function() {
      * Reset form buttons to original state
      */
     function resetFormButtons() {
-        const depositBtn = depositForm ? depositForm.querySelector('button') : null;
-        const withdrawBtn = withdrawForm ? withdrawForm.querySelector('button') : null;
+        const depositBtn = depositForm ? depositForm.querySelector('button[type="submit"]') : null;
+        const withdrawBtn = withdrawForm ? withdrawForm.querySelector('button[type="submit"]') : null;
         
         if (depositBtn) {
             depositBtn.disabled = false;
-            depositBtn.innerHTML = '<i class="fas fa-plus"></i> Deposit';
+            depositBtn.innerHTML = '<i class="fas fa-plus"></i> Deposit Money';
         }
         
         if (withdrawBtn) {
             withdrawBtn.disabled = false;
-            withdrawBtn.innerHTML = '<i class="fas fa-minus"></i> Withdraw';
+            withdrawBtn.innerHTML = '<i class="fas fa-minus"></i> Withdraw Money';
         }
     }
 

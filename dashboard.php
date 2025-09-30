@@ -30,6 +30,9 @@ $initial = strtoupper(substr($name, 0, 1));
 
 // Get recent activities
 $recentActivities = getRecentActivities($_SESSION['user_id'], 5, $pdo);
+
+// Ensure CSRF token is generated for this session
+$csrfToken = generateCSRFToken();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -104,8 +107,8 @@ $recentActivities = getRecentActivities($_SESSION['user_id'], 5, $pdo);
 
     <div class="container">
         <!-- Message Area -->
-        <div id="messageArea" class="alert alert-dismissible fade show d-none" role="alert">
-            <div id="messageContent"></div>
+        <div id="messageArea" class="alert alert-dismissible fade show d-none" role="alert" style="word-wrap: break-word; white-space: normal;">
+            <div id="messageContent" style="margin-right: 20px; line-height: 1.5;"></div>
             <button type="button" class="btn-close" aria-label="Close" onclick="document.getElementById('messageArea').classList.add('d-none')"></button>
         </div>
 
@@ -138,6 +141,7 @@ $recentActivities = getRecentActivities($_SESSION['user_id'], 5, $pdo);
                             </div>
                             <div class="card-body">
                                 <form id="depositForm">
+                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
                                     <div class="mb-3">
                                         <label for="deposit_amount" class="form-label">Amount</label>
                                         <div class="input-group">
@@ -170,6 +174,7 @@ $recentActivities = getRecentActivities($_SESSION['user_id'], 5, $pdo);
                             </div>
                             <div class="card-body">
                                 <form id="withdrawForm">
+                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
                                     <div class="mb-3">
                                         <label for="withdraw_amount" class="form-label">Amount</label>
                                         <div class="input-group">
@@ -312,35 +317,7 @@ $recentActivities = getRecentActivities($_SESSION['user_id'], 5, $pdo);
             input.focus();
         }
 
-        // Initialize forms when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            const depositForm = document.getElementById('depositForm');
-            const withdrawForm = document.getElementById('withdrawForm');
-
-            if (depositForm) {
-                depositForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const amount = document.getElementById('deposit_amount').value;
-                    if (amount && parseFloat(amount) > 0) {
-                        processTransaction('deposit', parseFloat(amount));
-                        // Clear form after submission
-                        document.getElementById('deposit_amount').value = '';
-                    }
-                });
-            }
-
-            if (withdrawForm) {
-                withdrawForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const amount = document.getElementById('withdraw_amount').value;
-                    if (amount && parseFloat(amount) > 0) {
-                        processTransaction('withdraw', parseFloat(amount));
-                        // Clear form after submission
-                        document.getElementById('withdraw_amount').value = '';
-                    }
-                });
-            }
-        });
+        // Form handling is done in app.js - no duplicate handlers needed here
 
         // Show message function for dashboard
         function showMessage(message, type) {
@@ -362,6 +339,12 @@ $recentActivities = getRecentActivities($_SESSION['user_id'], 5, $pdo);
                     case 'loading':
                         messageArea.classList.add('alert-info');
                         break;
+                    case 'info':
+                        messageArea.classList.add('alert-primary');
+                        break;
+                    case 'warning':
+                        messageArea.classList.add('alert-warning');
+                        break;
                     default:
                         messageArea.classList.add('alert-secondary');
                 }
@@ -369,9 +352,10 @@ $recentActivities = getRecentActivities($_SESSION['user_id'], 5, $pdo);
                 messageArea.classList.remove('d-none');
                 
                 if (type !== 'loading') {
+                    const hideDelay = type === 'error' ? 8000 : 5000; // Show errors longer
                     setTimeout(() => {
                         messageArea.classList.add('d-none');
-                    }, 5000);
+                    }, hideDelay);
                 }
             }
         }
