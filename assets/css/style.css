@@ -1,15 +1,78 @@
-/* ---------------- Custom styles for Bootstrap integration ---------------- */
+/**
+ * ATM System Custom Stylesheet - Bootstrap Enhanced
+ * 
+ * This stylesheet provides minimal custom styling to complement Bootstrap CSS framework.
+ * Focus on Bootstrap utility classes and components with minimal custom overrides.
+ * 
+ * Features:
+ * - Bootstrap-first approach
+ * - Minimal custom CSS overrides
+ * - Enhanced animations and transitions
+ * - Custom brand styling only where necessary
+ * - Responsive design using Bootstrap utilities
+ * 
+ * @author ATM System
+ * @version 2.0
+ */
 
-/* Dashboard specific styles (for pages not yet converted to Bootstrap) */
-body.dashboard-page {
-    background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 60%, #f1f5f9 100%);
-    display: block;
-    height: auto;
+/* ========================================================================
+   MINIMAL CUSTOM OVERRIDES FOR BOOTSTRAP
+   ======================================================================== */
+
+/**
+ * Dashboard page enhancement using Bootstrap background utilities
+ * Use: Add 'bg-light' class to body and these custom gradients for premium feel
+ */
+.bg-gradient-custom {
+    background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 60%, #f1f5f9 100%) !important;
     min-height: 100vh;
 }
 
-/* Legacy form styles for non-Bootstrap forms */
+/**
+ * Enhanced navbar brand with custom styling (Bootstrap doesn't have gold colors)
+ */
+.navbar-brand .text-warning {
+    color: #ffd700 !important;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    transition: text-shadow 0.3s ease;
+}
+
+.navbar-brand .text-warning:hover {
+    text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+/**
+ * Balance animation effects (not available in Bootstrap)
+ */
+.balance-updating {
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.balance-updated {
+    opacity: 1;
+    animation: balancePulse 0.5s ease;
+}
+
+@keyframes balancePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* ========================================================================
+   LEGACY COMPATIBILITY (Transition to Bootstrap Classes Recommended)
+   ======================================================================== */
+
+/**
+ * Legacy form styles - DEPRECATED: Use Bootstrap form classes instead
+ * 
+ * Recommended Bootstrap equivalent:
+ * - Replace .legacy-form with: .card .card-body .shadow .rounded
+ * - Replace .legacy-form input with: .form-control
+ * - Replace .legacy-form button with: .btn .btn-success .w-100
+ */
 .legacy-form {
+    /* Use Bootstrap: .card .card-body .shadow .rounded .mx-auto instead */
     background: #ffffff;
     padding: 30px 40px;
     border-radius: 10px;
@@ -19,18 +82,23 @@ body.dashboard-page {
 }
 
 .legacy-form h2 {
+    /* Use Bootstrap: .text-center .fw-semibold .mb-4 instead */
     text-align: center;
     margin-bottom: 20px;
     color: #333;
+    font-weight: 600;
 }
 
 .legacy-form label {
+    /* Use Bootstrap: .form-label .fw-bold instead */
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
+    color: #555;
 }
 
 .legacy-form input {
+    /* Use Bootstrap: .form-control instead */
     width: 100%;
     padding: 10px;
     margin-bottom: 15px;
@@ -40,6 +108,7 @@ body.dashboard-page {
 }
 
 .legacy-form button {
+    /* Use Bootstrap: .btn .btn-success .w-100 instead */
     width: 100%;
     padding: 10px;
     background-color: #4CAF50;
@@ -50,100 +119,150 @@ body.dashboard-page {
     cursor: pointer;
 }
 
-.legacy-form button:hover {
-    background-color: #45a049;
+/* ========================================================================
+   BOOTSTRAP ENHANCEMENT COMMENTS
+   ======================================================================== */
+
+/**
+ * BOOTSTRAP USAGE GUIDE FOR ATM SYSTEM
+ * 
+ * Instead of custom CSS, use these Bootstrap classes:
+ * 
+ * CARDS & CONTAINERS:
+ * - .card .card-body .shadow-sm .rounded for form containers
+ * - .container-fluid .container for responsive layouts
+ * - .row .col-* for grid system
+ * 
+ * ALERTS & MESSAGES:
+ * - .alert .alert-success/.alert-danger/.alert-info/.alert-warning
+ * - .alert-dismissible .fade .show for dismissible alerts
+ * 
+ * BUTTONS:
+ * - .btn .btn-primary/.btn-success/.btn-danger
+ * - .btn-lg .btn-sm for sizing
+ * - .w-100 for full width
+ * - .disabled for disabled state
+ * 
+ * FORMS:
+ * - .form-control .form-control-lg for inputs
+ * - .form-label .form-text for labels and help text
+ * - .input-group .input-group-text for input groups
+ * - .was-validated .is-invalid/.is-valid for validation
+ * 
+ * TYPOGRAPHY:
+ * - .fw-bold .fw-semibold .fw-normal for font weights
+ * - .text-center .text-start .text-end for alignment
+ * - .text-primary/.text-success/.text-danger for colors
+ * - .fs-1 to .fs-6 for font sizes
+ * 
+ * SPACING:
+ * - .m-* .p-* for margins and padding (0-5)
+ * - .mt-* .mb-* .ms-* .me-* for specific sides
+ * - .mx-auto for center alignment
+ * 
+ * BACKGROUNDS & BORDERS:
+ * - .bg-light .bg-primary .bg-success etc.
+ * - .border .border-* for borders
+ * - .rounded .rounded-* for border radius
+ * 
+ * UTILITIES:
+ * - .d-none .d-block .d-flex for display
+ * - .position-relative .position-absolute
+ * - .shadow .shadow-sm .shadow-lg for shadows
+ */
+
+/* ========================================================================
+   MINIMAL CUSTOM ANIMATIONS (Not Available in Bootstrap)
+   ======================================================================== */
+
+/**
+ * Loading spinner animation for transaction processing
+ */
+.spinner-grow-sm {
+    animation-duration: 0.75s;
 }
 
-/* Custom brand styling for Bootstrap navbar */
-.navbar-brand .fs-2 {
-    color: #ffd700 !important;
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+/**
+ * Smooth transitions for interactive elements
+ */
+.transition-all {
+    transition: all 0.3s ease;
 }
 
-/* Enhanced card shadows */
-.shadow-enhanced {
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+/* ========================================================================
+   PRINT STYLES (Bootstrap doesn't include comprehensive print styles)
+   ======================================================================== */
+
+/**
+ * Print-friendly styles for transaction receipts and statements
+ */
+@media print {
+    .navbar, .btn, .alert-dismissible .btn-close {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+    
+    body {
+        background: white !important;
+    }
+    
+    .text-primary, .text-success, .text-danger {
+        color: #000 !important;
+    }
 }
 
-/* Custom alert styling */
-.alert {
-    border: none;
-    border-radius: 10px;
+/* ========================================================================
+   ACCESSIBILITY ENHANCEMENTS (Complement Bootstrap's accessibility features)
+   ======================================================================== */
+
+/**
+ * Enhanced focus indicators for better accessibility
+ */
+.btn:focus, .form-control:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
 }
 
-.alert-success {
-    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-    border-left: 4px solid #28a745;
+/**
+ * High contrast mode support
+ */
+@media (prefers-contrast: high) {
+    .card {
+        border: 2px solid #000;
+    }
+    
+    .btn {
+        border: 2px solid currentColor;
+    }
 }
 
-.alert-danger {
-    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-    border-left: 4px solid #dc3545;
+/**
+ * Reduced motion support
+ */
+@media (prefers-reduced-motion: reduce) {
+    .balance-updating, .balance-updated, .transition-all {
+        animation: none !important;
+        transition: none !important;
+    }
 }
 
-.alert-info {
-    background: linear-gradient(135deg, #cce7ff 0%, #b8daff 100%);
-    border-left: 4px solid #007bff;
-}
-
-/* Enhanced form styling */
-.form-control-lg {
-    border-radius: 10px;
-    border: 2px solid #e9ecef;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-.form-control-lg:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
-}
-
-.input-group-text {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border: 2px solid #e9ecef;
-    border-radius: 10px 0 0 10px;
-    font-weight: 600;
-}
-
-/* Custom button styling */
-.btn-lg {
-    border-radius: 10px;
-    padding: 12px 24px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
-}
-
-.btn-primary:hover {
-    background: linear-gradient(135deg, #0b5ed7 0%, #0a58ca 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.4);
-}
-
-.btn-secondary {
-    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-}
-
-.btn-secondary:hover {
-    background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
-}
-
-/* Enhanced card styling */
-.card {
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
+/* ========================================================================
+   END OF CUSTOM STYLES
+   
+   RECOMMENDATION: Migrate remaining styles to Bootstrap classes:
+   
+   Example Migrations:
+   - Custom card styles → Use .card .shadow .rounded-3
+   - Custom button gradients → Use .btn .btn-primary with built-in styles
+   - Custom form styling → Use .form-control .is-valid .is-invalid
+   - Custom spacing → Use Bootstrap spacing utilities (.m-*, .p-*)
+   
+   This will reduce CSS file size and improve maintainability.
+   ======================================================================== */
 
 .card:hover {
     transform: translateY(-2px);
@@ -178,271 +297,39 @@ body.dashboard-page {
     }
 }
 
-/* ---------------- Dashboard Page ---------------- */
-.dashboard-container {
-    max-width: 400px;
-    width: 100%;
-    text-align: center;
-    margin: 0 auto;
-}
+/* ========================================================================
+   MIGRATION GUIDE: Replace all custom styles below with Bootstrap classes
+   ======================================================================== */
 
-.card {
-    background: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    margin-bottom: 20px;
-}
-
-.card-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: #111827;
-}
-
-.card-balance {
-    font-size: 1rem;
-    color: #6b7280;
-    margin-bottom: 4px;
-}
-
-.balance-amount {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #16a34a;
-    margin: 0;
-}
-
-.menu {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.menu .btn {
-    display: block;
-    text-decoration: none;
-    background: #2563eb;
-    color: white;
-    padding: 12px;
-    border-radius: 12px;
-    font-weight: 500;
-    transition: background 0.2s;
-}
-
-.menu .btn:hover {
-    background: #1d4ed8;
-}
-
-.menu .btn-danger {
-    background: #dc2626;
-}
-
-.menu .btn-danger:hover {
-    background: #b91c1c;
-}
-
-/* ---------------- Activities Section ---------------- */
-.activities-list {
-    margin-top: 15px;
-}
-
-/* ================= Modern Dashboard Theme ================ */
-.dashboard-wrapper {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 24px;
-}
-
-.dashboard-header {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 14px 18px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin: 20px auto;
-}
-
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand-logo {
-    width: 36px; height: 36px; border-radius: 50%;
-    display: grid; place-items: center;
-    background: #4f46e5; color: #fff; font-weight: 700;
-}
-.brand-name { font-weight: 700; color: #111827; letter-spacing: .3px; }
-
-.user-info { display: flex; align-items: center; gap: 12px; }
-.avatar {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: #e0e7ff; color: #3730a3;
-    display: grid; place-items: center; font-weight: 700;
-}
-.user-meta { line-height: 1.1; }
-.hello { font-size: 11px; color: #6b7280; }
-.user-name { font-size: 14px; font-weight: 600; color: #111827; }
-.header-link { color: #2563eb; text-decoration: none; font-weight: 600; margin-left: 8px; }
-.header-link:hover { text-decoration: underline; }
-
-.dashboard-main { margin-top: 10px; }
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
-}
-
-@media (min-width: 900px) {
-    .dashboard-grid { grid-template-columns: 1.2fr 1fr; }
-}
-
-.balance-card {
-    background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #0f172a 100%);
-    color: #e5e7eb;
-}
-.balance-top { text-align: left; margin-bottom: 18px; }
-.balance-label { color: #93c5fd; font-weight: 600; letter-spacing: .4px; }
-.balance-amount-lg { font-size: 42px; font-weight: 800; color: #22c55e; margin-top: 6px; }
-
-.actions {
-    display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-    gap: 12px;
-}
-
-@media (min-width: 520px) {
-    .actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-.action-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    background: #111827;
-    color: #e5e7eb;
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.08);
-    transition: transform .12s ease, background .2s ease;
-}
-.action-btn:hover { transform: translateY(-1px); background: #0b1220; }
-.action-btn .icon { font-size: 18px; }
-.action-btn.danger { background: #7f1d1d; border-color: rgba(255,255,255,0.12); }
-.action-btn.danger:hover { background: #701a1a; }
-
-.activities-card .card-head { display: flex; justify-content: space-between; align-items: baseline; }
-.activities-card h3 { margin: 0; font-size: 18px; color: #111827; }
-.activities-card .muted { color: #6b7280; font-size: 12px; }
-.empty-state { text-align: center; color: #6b7280; font-style: italic; margin: 20px 0 6px; }
-
-.activity-list { display: flex; flex-direction: column; gap: 10px; }
-.activity-row { display: grid; grid-template-columns: 36px 1fr auto; gap: 12px; align-items: center; }
-.activity-icon { width: 36px; height: 36px; border-radius: 50%; background: #eef2ff; display: grid; place-items: center; font-size: 16px; }
-.activity-info { display: grid; gap: 2px; min-width: 0; }
-.activity-title { font-weight: 700; color: #0f172a; font-size: 14px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.activity-desc { color: #4b5563; font-size: 12px; line-height: 1.3; overflow-wrap: anywhere; }
-.activity-time { color: #6b7280; font-size: 11px; white-space: nowrap; }
-
-.activity-item {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 10px;
-    transition: background 0.2s;
-}
-
-.activity-item:hover {
-    background: #f1f3f4;
-}
-
-.activity-item:last-child {
-    margin-bottom: 0;
-}
-
-.activity-type {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 4px;
-    font-size: 14px;
-}
-
-.activity-description {
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 6px;
-    line-height: 1.4;
-}
-
-.activity-time {
-    font-size: 11px;
-    color: #888;
-    text-align: right;
-}
-
-/* ---------------- Transfer Page Styles ---------------- */
-.form-help {
-    font-size: 12px;
-    color: #6b7280;
-    display: block;
-    margin-top: 4px;
-    margin-bottom: 10px;
-}
-
-.transfer-summary {
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 16px;
-    margin: 20px 0;
-}
-
-.transfer-summary h4 {
-    margin: 0 0 12px 0;
-    color: #374151;
-    font-size: 16px;
-}
-
-.summary-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.summary-label {
-    font-weight: 600;
-    color: #6b7280;
-}
-
-.summary-value {
-    color: #111827;
-    font-weight: 500;
-}
-
-.transfer-info {
-    background: #fef3c7;
-    border: 1px solid #f59e0b;
-    border-radius: 8px;
-    padding: 16px;
-    margin-top: 24px;
-}
-
-.transfer-info h4 {
-    margin: 0 0 12px 0;
-    color: #92400e;
-    font-size: 16px;
-}
-
-.transfer-info ul {
-    margin: 0;
-    padding-left: 18px;
-}
-
-.transfer-info li {
-    color: #92400e;
-    margin-bottom: 6px;
-    font-size: 14px;
-}
+/**
+ * DASHBOARD STYLES → Bootstrap Equivalent:
+ * 
+ * .dashboard-container → .container .mx-auto .text-center
+ * .card → .card .shadow .rounded-3 .mb-4
+ * .card-title → .card-title .h4 .fw-semibold .text-dark
+ * .card-balance → .text-muted .small
+ * .balance-amount → .display-4 .fw-bold .text-success
+ * .menu → .d-flex .flex-column .gap-3
+ * .menu .btn → .btn .btn-primary .w-100 .fw-medium
+ * 
+ * ACTIVITY STYLES → Bootstrap Equivalent:
+ * 
+ * .activity-item → .list-group-item .d-flex .justify-content-between .align-items-center
+ * .activity-type → .fw-semibold .text-dark
+ * .activity-description → .small .text-muted
+ * .activity-time → .small .text-secondary
+ * 
+ * RESPONSIVE DESIGN → Use Bootstrap breakpoints:
+ * 
+ * @media (max-width: 768px) → .d-md-block .d-lg-flex etc.
+ * Custom grid → .row .col-12 .col-md-6 .col-lg-4
+ * 
+ * FORMS → Bootstrap form classes:
+ * 
+ * .form-help → .form-text .text-muted
+ * .transfer-summary → .alert .alert-light .border
+ * .summary-row → .d-flex .justify-content-between
+ * .transfer-info → .alert .alert-warning
+ * 
+ * Delete everything below and use Bootstrap classes directly in HTML.
+ */

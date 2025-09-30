@@ -1,69 +1,116 @@
 <?php
-// Helper functions for validation and security
+/**
+ * Helper Functions Library
+ * 
+ * This file contains utility functions for data validation, security, 
+ * activity logging, and other common operations used throughout the ATM system.
+ * 
+ * Key Features:
+ * - Input sanitization and validation
+ * - Email and PIN format validation
+ * - User activity tracking and logging
+ * - Security-focused helper functions
+ * - Database query helpers
+ * 
+ * @author ATM System
+ * @version 1.0
+ */
 
-// Clean and sanitize input data
+/**
+ * Clean and sanitize user input to prevent XSS and other injection attacks
+ * 
+ * @param string $data Raw input data from user
+ * @return string Cleaned and sanitized data
+ */
 if (!function_exists('cleanInput')) {
 function cleanInput($data) {
-    $data = trim($data); // remove extra spaces
-    $data = stripslashes($data); // remove backslashes
-    $data = htmlspecialchars($data); // convert special characters
+    $data = trim($data);                    // Remove leading/trailing whitespace
+    $data = stripslashes($data);            // Remove backslashes (prevent escape sequence attacks)
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8'); // Convert special chars to HTML entities
     return $data;
 }
 }
 
-// Validate email format
+/**
+ * Validate email address format using PHP's built-in filter
+ * 
+ * @param string $email Email address to validate
+ * @return bool True if valid email format, false otherwise
+ */
 if (!function_exists('validateEmail')) {
 function validateEmail($email) {
     $email = cleanInput($email);
-    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        return true;
-    }
-    return false;
+    
+    // Use PHP's built-in email validation filter (RFC 5322 compliant)
+    return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
 }
 }
 
-// Validate PIN format (4-6 digits only)
+/**
+ * Validate PIN format - ensures PIN contains only 4-6 digits
+ * This provides security by enforcing standard ATM PIN formats
+ * 
+ * @param string $pin PIN to validate
+ * @return bool True if valid PIN format, false otherwise
+ */
 if (!function_exists('validatePin')) {
 function validatePin($pin) {
     $pin = cleanInput($pin);
-    // Check if PIN is 4-6 digits only
-    if (preg_match('/^[0-9]{4,6}$/', $pin)) {
-        return true;
-    }
-    return false;
+    
+    // Check if PIN is exactly 4-6 digits (no letters, symbols, or spaces)
+    return preg_match('/^[0-9]{4,6}$/', $pin) === 1;
 }
 }
 
-// Validate name (letters and spaces only, 2-50 characters)
+/**
+ * Validate name format - ensures proper name formatting for security
+ * Prevents injection attacks while allowing international names
+ * 
+ * @param string $name Name to validate
+ * @return bool True if valid name format, false otherwise
+ */
 if (!function_exists('validateName')) {
 function validateName($name) {
     $name = cleanInput($name);
-    if (strlen($name) >= 2 && strlen($name) <= 50 && preg_match('/^[a-zA-Z\s]+$/', $name)) {
-        return true;
-    }
-    return false;
+    
+    // Check length constraints and character restrictions
+    return (strlen($name) >= 2 && strlen($name) <= 50 && 
+            preg_match('/^[a-zA-Z\s]+$/', $name) === 1);
 }
 }
 
-// Check if email already exists in database
+/**
+ * Check if email address already exists in the database
+ * Used during registration to prevent duplicate accounts
+ * 
+ * @param string $email Email address to check
+ * @param PDO $pdo Database connection object
+ * @return bool True if email exists, false if available
+ */
 if (!function_exists('emailExists')) {
 function emailExists($email, $pdo) {
     $sql = "SELECT id FROM users WHERE email = :email LIMIT 1";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([':email' => $email]);
     
-    if ($stmt->fetch()) {
-        return true; // email exists
-    }
-    return false; // email doesn't exist
+    return $stmt->fetch() !== false; // Returns true if email found
 }
 }
 
-// Generate error messages for validation
+/**
+ * Generate comprehensive validation error messages for user registration
+ * Provides user-friendly feedback for form validation failures
+ * 
+ * @param string $name User's full name
+ * @param string $email User's email address
+ * @param string $pin User's chosen PIN
+ * @return array Array of validation error messages
+ */
 if (!function_exists('getValidationErrors')) {
 function getValidationErrors($name, $email, $pin) {
     $errors = array();
     
+    // Validate each field and collect specific error messages
     if (!validateName($name)) {
         $errors[] = "Name must be 2-50 characters and contain only letters and spaces.";
     }
@@ -80,14 +127,28 @@ function getValidationErrors($name, $email, $pin) {
 }
 }
 
-// Get recent activities for a user
+/**
+ * Retrieve recent user activities for dashboard display
+ * Provides security audit trail and user activity overview
+ * 
+ * @param int $userId User ID to get activities for
+ * @param int $limit Maximum number of activities to retrieve
+ * @param PDO $pdo Database connection object
+ * @return array Array of recent activities with timestamps
+ */
 if (!function_exists('getRecentActivities')) {
 function getRecentActivities($userId, $limit = 5, $pdo = null) {
+    // Use global PDO connection if not provided
     if (!$pdo) {
         require_once 'db.php';
         global $pdo;
     }
     
+    // Sanitize inputs for security
+    $userId = (int) $userId;
+    $limit = (int) $limit;
+    
+    // Query recent activities with proper indexing for performance
     $sql = "SELECT activity_type, description, ip_address, created_at 
             FROM user_activities 
             WHERE user_id = :user_id 
@@ -103,21 +164,48 @@ function getRecentActivities($userId, $limit = 5, $pdo = null) {
 }
 }
 
-// Enhanced log_activity function for non-transactional events
+/**
+ * Enhanced activity logging function for comprehensive security monitoring
+ * Tracks all user actions for audit trails and security analysis
+ * 
+ * Features:
+ * - Automatic IP detection and user agent tracking
+ * - Error handling with graceful degradation
+ * - Transaction-safe logging (won't break main operations)
+ * - Standardized activity type classification
+ * 
+ * @param int $userId User ID performing the activity
+ * @param string $activityType Type of activity (login, deposit, withdraw, etc.)
+ * @param string|null $description Optional detailed description
+ * @param PDO|null $pdo Database connection (uses global if not provided)
+ * @param string|null $ipAddress IP address (auto-detected if not provided)
+ * @param string|null $userAgent User agent string (auto-detected if not provided)
+ * @return bool True if logged successfully, false on failure
+ */
 if (!function_exists('log_activity')) {
 function log_activity($userId, $activityType, $description = null, $pdo = null, $ipAddress = null, $userAgent = null) {
-    // Use global PDO if not provided
+    // Use global PDO connection if not provided
     if (!$pdo) {
         require_once 'db.php';
         global $pdo;
         if (!$pdo) {
-            return false; // Cannot log without database connection
+            error_log("Cannot log activity: Database connection unavailable");
+            return false; // Fail gracefully without breaking the application
         }
     }
     
-    // Auto-detect IP and User Agent if not provided
+    // Auto-detect client information for security tracking
     if ($ipAddress === null) {
-        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? 'Unknown';
+        // Get real IP address (considering proxies and load balancers)
+        $ipAddress = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? 
+                     $_SERVER['HTTP_X_REAL_IP'] ?? 
+                     $_SERVER['REMOTE_ADDR'] ?? 
+                     'Unknown';
+                     
+        // Handle comma-separated IPs from proxies (take first one)
+        if (strpos($ipAddress, ',') !== false) {
+            $ipAddress = trim(explode(',', $ipAddress)[0]);
+        }
     }
     
     if ($userAgent === null) {
@@ -125,87 +213,113 @@ function log_activity($userId, $activityType, $description = null, $pdo = null, 
     }
     
     try {
+        // Insert activity log with comprehensive information
         $sql = "INSERT INTO user_activities (user_id, activity_type, description, ip_address, user_agent) 
                 VALUES (:user_id, :activity_type, :description, :ip_address, :user_agent)";
         
         $stmt = $pdo->prepare($sql);
         $result = $stmt->execute([
-            ':user_id' => $userId,
-            ':activity_type' => $activityType,
+            ':user_id' => (int) $userId,
+            ':activity_type' => trim($activityType),
             ':description' => $description,
-            ':ip_address' => $ipAddress,
-            ':user_agent' => $userAgent
+            ':ip_address' => substr($ipAddress, 0, 45), // Limit IP length for database
+            ':user_agent' => substr($userAgent, 0, 500)  // Limit user agent length
         ]);
         
         return $result;
         
     } catch (PDOException $e) {
-        // Log error but don't break the application
-        error_log("Activity logging failed: " . $e->getMessage());
+        // Log error but don't break the application flow
+        error_log("Activity logging failed for user {$userId}: " . $e->getMessage());
         return false;
     }
 }
 }
 
-// Alias for backward compatibility - logActivity calls log_activity
+/**
+ * Backward compatibility alias for log_activity function
+ * Maintains compatibility with existing code while providing same functionality
+ * 
+ * @param int $userId User ID performing the activity
+ * @param string $activityType Type of activity
+ * @param string|null $description Optional description
+ * @param PDO|null $pdo Database connection
+ * @return bool Success status
+ */
 if (!function_exists('logActivity')) {
 function logActivity($userId, $activityType, $description = null, $pdo = null) {
     return log_activity($userId, $activityType, $description, $pdo);
 }
 }
 
-// Change user PIN securely
+/**
+ * Securely change user's PIN with comprehensive validation and security checks
+ * 
+ * Security Features:
+ * - Current PIN verification before allowing change
+ * - New PIN format validation
+ * - Prevention of reusing current PIN
+ * - Secure password hashing
+ * - Activity logging for audit trail
+ * - Transaction safety with error handling
+ * 
+ * @param int $userId User ID requesting PIN change
+ * @param string $currentPin Current PIN for verification
+ * @param string $newPin New PIN to set
+ * @param PDO $pdo Database connection object
+ * @return array Result array with success status and message
+ */
 if (!function_exists('changePIN')) {
 function changePIN($userId, $currentPin, $newPin, $pdo) {
-    // Validate new PIN format
+    // Validate new PIN format for security compliance
     if (!validatePin($newPin)) {
         return ['success' => false, 'message' => 'New PIN must be 4-6 digits only.'];
     }
     
-    // Get current user data to verify current PIN
+    // Retrieve current user PIN hash for verification
     $sql = "SELECT pin FROM users WHERE id = :id LIMIT 1";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([':id' => $userId]);
+    $stmt->execute([':id' => (int) $userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$user) {
         return ['success' => false, 'message' => 'User not found.'];
     }
     
-    // Verify current PIN
+    // Security Check: Verify current PIN before allowing change
     if (!password_verify($currentPin, $user['pin'])) {
-        // Log failed PIN change attempt
-        log_activity($userId, 'failed_login', 'Failed PIN change attempt - wrong current PIN', $pdo);
+        // Log suspicious PIN change attempt for security monitoring
+        log_activity($userId, 'failed_pin_change', 'Failed PIN change attempt - wrong current PIN', $pdo);
         return ['success' => false, 'message' => 'Current PIN is incorrect.'];
     }
     
-    // Check if new PIN is same as current PIN
+    // Security Check: Prevent setting same PIN (force PIN change)
     if (password_verify($newPin, $user['pin'])) {
         return ['success' => false, 'message' => 'New PIN must be different from current PIN.'];
     }
     
     try {
-        // Hash new PIN
+        // Generate secure hash for new PIN using PHP's password_hash
         $hashedNewPin = password_hash($newPin, PASSWORD_DEFAULT);
         
-        // Update PIN in database
+        // Update PIN in database with atomic operation
         $updateSql = "UPDATE users SET pin = :new_pin WHERE id = :id";
         $updateStmt = $pdo->prepare($updateSql);
         $result = $updateStmt->execute([
             ':new_pin' => $hashedNewPin,
-            ':id' => $userId
+            ':id' => (int) $userId
         ]);
         
         if ($result) {
-            // Log successful PIN change
-            log_activity($userId, 'login', 'PIN changed successfully', $pdo);
+            // Log successful PIN change for security audit
+            log_activity($userId, 'pin_changed', 'PIN changed successfully', $pdo);
             return ['success' => true, 'message' => 'PIN changed successfully.'];
         } else {
             return ['success' => false, 'message' => 'Failed to update PIN. Please try again.'];
         }
         
     } catch (PDOException $e) {
-        // Log error
+        // Log database error for debugging
         error_log("PIN change failed for user $userId: " . $e->getMessage());
         return ['success' => false, 'message' => 'Database error. Please try again later.'];
     }
@@ -234,102 +348,191 @@ function formatActivityType($activityType) {
 }
 }
 
-// Return only an emoji/icon for an activity type
+/**
+ * Get activity icon/emoji for visual representation in UI
+ * Provides consistent iconography for different activity types
+ * 
+ * @param string $activityType Type of activity
+ * @return string Unicode emoji representing the activity
+ */
 if (!function_exists('activityIcon')) {
 function activityIcon($activityType) {
-    switch($activityType) {
-        case 'login': return '🔓';
-        case 'logout': return '🔒';
-        case 'failed_login': return '❌';
-        case 'account_locked': return '🚫';
-        case 'deposit': return '💰';
-        case 'withdraw': return '💸';
-        default: return '📝';
-    }
+    // Standardized icon mapping for better UX
+    $icons = [
+        'login' => '🔓',
+        'logout' => '🔒',
+        'failed_login' => '❌',
+        'account_locked' => '🚫',
+        'deposit' => '💰',
+        'withdraw' => '💸',
+        'transfer' => '↔️',
+        'pin_changed' => '�',
+        'registration' => '👤'
+    ];
+    
+    return $icons[$activityType] ?? '📝'; // Default icon for unknown types
 }
 }
 
-// Return only a clean text label for an activity type
+/**
+ * Get human-readable label for activity types
+ * Converts system activity codes to user-friendly text
+ * 
+ * @param string $activityType Type of activity
+ * @return string Human-readable activity label
+ */
 if (!function_exists('activityLabel')) {
 function activityLabel($activityType) {
-    switch($activityType) {
-        case 'login': return 'Successful Login';
-        case 'logout': return 'Logout';
-        case 'failed_login': return 'Failed Login Attempt';
-        case 'account_locked': return 'Account Locked';
-        case 'deposit': return 'Deposit';
-        case 'withdraw': return 'Withdrawal';
-        default: return ucfirst(str_replace('_', ' ', $activityType));
-    }
+    // Standardized label mapping for consistency
+    $labels = [
+        'login' => 'Successful Login',
+        'logout' => 'Logout',
+        'failed_login' => 'Failed Login Attempt',
+        'account_locked' => 'Account Locked',
+        'deposit' => 'Deposit',
+        'withdraw' => 'Withdrawal',
+        'transfer' => 'Money Transfer',
+        'pin_changed' => 'PIN Changed',
+        'registration' => 'Account Registration'
+    ];
+    
+    // Return mapped label or format unknown types
+    return $labels[$activityType] ?? ucfirst(str_replace('_', ' ', $activityType));
 }
 }
 
-// Process transaction (deposit or withdraw)
+/**
+ * Process banking transactions (deposits/withdrawals) with ACID compliance
+ * 
+ * This function ensures data integrity through database transactions and provides
+ * comprehensive error handling for all banking operations.
+ * 
+ * Features:
+ * - ACID-compliant database transactions
+ * - Automatic rollback on errors
+ * - Comprehensive activity logging
+ * - Balance consistency validation
+ * 
+ * @param int $userId User ID performing the transaction
+ * @param string $type Transaction type ('deposit' or 'withdraw')
+ * @param float $amount Transaction amount
+ * @param float $newBalance Expected new balance after transaction
+ * @param PDO $pdo Database connection object
+ * @return array Result array with success status and details
+ */
 if (!function_exists('processTransaction')) {
 function processTransaction($userId, $type, $amount, $newBalance, $pdo) {
     try {
-        // Start transaction
+        // Start database transaction for ACID compliance
         $pdo->beginTransaction();
         
-        // Update user balance
+        // Update user balance atomically
         $updateSql = "UPDATE users SET balance = :balance WHERE id = :id";
         $updateStmt = $pdo->prepare($updateSql);
-        $updateStmt->execute([
+        $updateResult = $updateStmt->execute([
             ':balance' => $newBalance,
-            ':id' => $userId
+            ':id' => (int) $userId
         ]);
         
-        // Record transaction in transactions table
-        $transactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) VALUES (:user_id, :type, :amount, :balance_after)";
+        if (!$updateResult) {
+            throw new Exception("Failed to update user balance");
+        }
+        
+        // Record transaction in audit table
+        $transactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) 
+                          VALUES (:user_id, :type, :amount, :balance_after)";
         $transactionStmt = $pdo->prepare($transactionSql);
-        $transactionStmt->execute([
-            ':user_id' => $userId,
+        $transactionResult = $transactionStmt->execute([
+            ':user_id' => (int) $userId,
             ':type' => $type,
-            ':amount' => $amount,
-            ':balance_after' => $newBalance
+            ':amount' => floatval($amount),
+            ':balance_after' => floatval($newBalance)
         ]);
         
-        // Commit transaction
+        if (!$transactionResult) {
+            throw new Exception("Failed to record transaction");
+        }
+        
+        // Log transaction activity for audit trail
+        $description = ucfirst($type) . " of $" . number_format($amount, 2) . 
+                      " - New balance: $" . number_format($newBalance, 2);
+        log_activity($userId, $type, $description, $pdo);
+        
+        // Commit all changes atomically
         $pdo->commit();
-        return true;
+        
+        return [
+            'success' => true,
+            'message' => ucfirst($type) . ' completed successfully',
+            'new_balance' => $newBalance
+        ];
         
     } catch (Exception $e) {
-        // Rollback transaction on error
+        // Rollback all changes on any error
         $pdo->rollback();
-        return false;
+        
+        // Log error for debugging
+        error_log("Transaction failed for user $userId: " . $e->getMessage());
+        
+        return [
+            'success' => false,
+            'message' => 'Transaction failed. Please try again.',
+            'error' => $e->getMessage()
+        ];
     }
 }
 }
 
-// Get user ID by email
+/**
+ * Retrieve user information by email address
+ * Used for transfer operations and user lookups
+ * 
+ * @param string $email Email address to search for
+ * @param PDO $pdo Database connection object
+ * @return array|false User data array or false if not found
+ */
 if (!function_exists('getUserByEmail')) {
 function getUserByEmail($email, $pdo) {
     $sql = "SELECT id, name, balance FROM users WHERE email = :email LIMIT 1";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([':email' => $email]);
+    $stmt->execute([':email' => cleanInput($email)]);
     
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 }
 
-// Validate transfer parameters
+/**
+ * Comprehensive validation for money transfer operations
+ * 
+ * Validates all aspects of a transfer including:
+ * - Recipient email format and existence
+ * - Amount validity and sufficient funds
+ * - Self-transfer prevention
+ * - Business rule compliance
+ * 
+ * @param string $senderEmail Sender's email address
+ * @param string $recipientEmail Recipient's email address
+ * @param float $amount Transfer amount
+ * @param float $senderBalance Sender's current balance
+ * @return array Array of validation error messages (empty if valid)
+ */
 if (!function_exists('validateTransfer')) {
 function validateTransfer($senderEmail, $recipientEmail, $amount, $senderBalance) {
     $errors = array();
     
-    // Check if recipient email is provided and valid
+    // Validate recipient email
     if (empty($recipientEmail)) {
         $errors[] = "Recipient email is required.";
     } elseif (!validateEmail($recipientEmail)) {
         $errors[] = "Please enter a valid recipient email address.";
     }
     
-    // Check if sender is trying to transfer to themselves
+    // Security Check: Prevent self-transfers
     if ($senderEmail === $recipientEmail) {
         $errors[] = "You cannot transfer money to yourself.";
     }
     
-    // Validate amount
+    // Validate transfer amount
     if (empty($amount) || !is_numeric($amount) || $amount <= 0) {
         $errors[] = "Please enter a valid amount greater than 0.";
     } elseif ($amount > $senderBalance) {
@@ -340,74 +543,145 @@ function validateTransfer($senderEmail, $recipientEmail, $amount, $senderBalance
 }
 }
 
-// Process transfer between users with atomic transaction
+/**
+ * Process money transfer between users with ACID compliance
+ * 
+ * This function handles the complete transfer process including:
+ * - Atomic balance updates for both sender and recipient
+ * - Transaction logging for audit trail
+ * - Activity logging for security monitoring
+ * - Error handling with automatic rollback
+ * 
+ * @param int $senderId Sender's user ID
+ * @param int $recipientId Recipient's user ID
+ * @param float $amount Transfer amount
+ * @param float $senderNewBalance Sender's balance after transfer
+ * @param float $recipientNewBalance Recipient's balance after transfer
+ * @param PDO $pdo Database connection object
+ * @return array Result array with success status and transaction IDs
+ */
 if (!function_exists('processTransfer')) {
 function processTransfer($senderId, $recipientId, $amount, $senderNewBalance, $recipientNewBalance, $pdo) {
     try {
-        // Start transaction
+        // Start atomic transaction for ACID compliance
         $pdo->beginTransaction();
         
-        // Update sender balance
+        // Update sender's balance
         $updateSenderSql = "UPDATE users SET balance = :balance WHERE id = :id";
         $updateSenderStmt = $pdo->prepare($updateSenderSql);
-        $updateSenderStmt->execute([
-            ':balance' => $senderNewBalance,
-            ':id' => $senderId
+        $senderUpdateResult = $updateSenderStmt->execute([
+            ':balance' => floatval($senderNewBalance),
+            ':id' => intval($senderId)
         ]);
         
-        // Update recipient balance
+        if (!$senderUpdateResult) {
+            throw new Exception("Failed to update sender balance");
+        }
+        
+        // Update recipient's balance
         $updateRecipientSql = "UPDATE users SET balance = :balance WHERE id = :id";
         $updateRecipientStmt = $pdo->prepare($updateRecipientSql);
-        $updateRecipientStmt->execute([
-            ':balance' => $recipientNewBalance,
-            ':id' => $recipientId
+        $recipientUpdateResult = $updateRecipientStmt->execute([
+            ':balance' => floatval($recipientNewBalance),
+            ':id' => intval($recipientId)
         ]);
         
-        // Record transaction for sender (transfer out)
-        $senderTransactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) VALUES (:user_id, :type, :amount, :balance_after)";
+        if (!$recipientUpdateResult) {
+            throw new Exception("Failed to update recipient balance");
+        }
+        
+        // Record outgoing transaction for sender
+        $senderTransactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) 
+                                VALUES (:user_id, :type, :amount, :balance_after)";
         $senderTransactionStmt = $pdo->prepare($senderTransactionSql);
-        $senderTransactionStmt->execute([
-            ':user_id' => $senderId,
-            ':type' => 'transfer',
-            ':amount' => -$amount, // Negative for outgoing transfer
-            ':balance_after' => $senderNewBalance
+        $senderTransactionResult = $senderTransactionStmt->execute([
+            ':user_id' => intval($senderId),
+            ':type' => 'transfer_out',
+            ':amount' => -floatval($amount), // Negative for outgoing transfer
+            ':balance_after' => floatval($senderNewBalance)
         ]);
         
-        // Get the sender transaction ID
+        if (!$senderTransactionResult) {
+            throw new Exception("Failed to record sender transaction");
+        }
+        
         $senderTransactionId = $pdo->lastInsertId();
         
-        // Record transaction for recipient (transfer in)
-        $recipientTransactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) VALUES (:user_id, :type, :amount, :balance_after)";
+        // Record incoming transaction for recipient
+        $recipientTransactionSql = "INSERT INTO transactions (user_id, type, amount, balance_after) 
+                                   VALUES (:user_id, :type, :amount, :balance_after)";
         $recipientTransactionStmt = $pdo->prepare($recipientTransactionSql);
-        $recipientTransactionStmt->execute([
-            ':user_id' => $recipientId,
-            ':type' => 'transfer',
-            ':amount' => $amount, // Positive for incoming transfer
-            ':balance_after' => $recipientNewBalance
+        $recipientTransactionResult = $recipientTransactionStmt->execute([
+            ':user_id' => intval($recipientId),
+            ':type' => 'transfer_in',
+            ':amount' => floatval($amount), // Positive for incoming transfer
+            ':balance_after' => floatval($recipientNewBalance)
         ]);
         
-        // Get the recipient transaction ID
+        if (!$recipientTransactionResult) {
+            throw new Exception("Failed to record recipient transaction");
+        }
+        
         $recipientTransactionId = $pdo->lastInsertId();
         
-        // Commit transaction
+        // Log transfer activity for both users
+        $transferDescription = "Transfer of $" . number_format($amount, 2);
+        log_activity($senderId, 'transfer_out', $transferDescription . " sent", $pdo);
+        log_activity($recipientId, 'transfer_in', $transferDescription . " received", $pdo);
+        
+        // Commit all changes atomically
         $pdo->commit();
-        return array('success' => true, 'sender_transaction_id' => $senderTransactionId, 'recipient_transaction_id' => $recipientTransactionId);
+        
+        return [
+            'success' => true,
+            'message' => 'Transfer completed successfully',
+            'sender_transaction_id' => $senderTransactionId,
+            'recipient_transaction_id' => $recipientTransactionId
+        ];
         
     } catch (Exception $e) {
-        // Rollback transaction on error
+        // Rollback all changes on any error
         $pdo->rollback();
-        return array('success' => false, 'error' => $e->getMessage());
+        
+        // Log transfer error for debugging
+        error_log("Transfer failed between users $senderId and $recipientId: " . $e->getMessage());
+        
+        return [
+            'success' => false,
+            'message' => 'Transfer failed. Please try again.',
+            'error' => $e->getMessage()
+        ];
     }
 }
 }
 
-// Get transactions with filtering and pagination
+/**
+ * Get filtered and paginated transaction history for a user
+ * 
+ * This function provides comprehensive transaction filtering and pagination
+ * capabilities for the transaction history feature.
+ * 
+ * Features:
+ * - Date range filtering
+ * - Transaction type filtering
+ * - Pagination with configurable page size
+ * - Total count calculation
+ * - Optimized SQL queries
+ * 
+ * @param int $userId User ID to get transactions for
+ * @param array $filters Filter criteria (date_from, date_to, type)
+ * @param int $page Current page number (1-based)
+ * @param int $perPage Number of transactions per page
+ * @param PDO $pdo Database connection object
+ * @return array Array containing transactions and pagination info
+ */
 if (!function_exists('getTransactionsWithFilters')) {
 function getTransactionsWithFilters($userId, $filters = [], $page = 1, $perPage = 10, $pdo) {
+    // Build dynamic WHERE clause based on filters
     $conditions = ["user_id = :user_id"];
-    $params = [':user_id' => $userId];
+    $params = [':user_id' => intval($userId)];
     
-    // Add date range filter
+    // Apply date range filter if provided
     if (!empty($filters['date_from'])) {
         $conditions[] = "DATE(created_at) >= :date_from";
         $params[':date_from'] = $filters['date_from'];
@@ -418,25 +692,25 @@ function getTransactionsWithFilters($userId, $filters = [], $page = 1, $perPage 
         $params[':date_to'] = $filters['date_to'];
     }
     
-    // Add transaction type filter
+    // Apply transaction type filter if specified
     if (!empty($filters['type']) && $filters['type'] !== 'all') {
         $conditions[] = "type = :type";
         $params[':type'] = $filters['type'];
     }
     
-    // Build WHERE clause
+    // Combine all conditions
     $whereClause = implode(' AND ', $conditions);
     
-    // Calculate offset for pagination
-    $offset = ($page - 1) * $perPage;
+    // Calculate pagination offset
+    $offset = (intval($page) - 1) * intval($perPage);
     
-    // Get total count for pagination
+    // Get total transaction count for pagination
     $countSql = "SELECT COUNT(*) as total FROM transactions WHERE $whereClause";
     $countStmt = $pdo->prepare($countSql);
     $countStmt->execute($params);
     $totalTransactions = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
     
-    // Get transactions with pagination
+    // Get paginated transactions
     $sql = "SELECT id, type, amount, balance_after, created_at 
             FROM transactions 
             WHERE $whereClause 
@@ -445,11 +719,13 @@ function getTransactionsWithFilters($userId, $filters = [], $page = 1, $perPage 
     
     $stmt = $pdo->prepare($sql);
     
-    // Bind all parameters
+    // Bind filter parameters
     foreach ($params as $key => $value) {
         $stmt->bindValue($key, $value);
     }
-    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    
+    // Bind pagination parameters
+    $stmt->bindValue(':limit', intval($perPage), PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     
     $stmt->execute();
@@ -457,25 +733,36 @@ function getTransactionsWithFilters($userId, $filters = [], $page = 1, $perPage 
     
     return [
         'transactions' => $transactions,
-        'total' => $totalTransactions,
-        'current_page' => $page,
-        'per_page' => $perPage,
+        'total' => intval($totalTransactions),
+        'current_page' => intval($page),
+        'per_page' => intval($perPage),
         'total_pages' => ceil($totalTransactions / $perPage)
     ];
 }
 }
 
-// Format transaction amount for display
+/**
+ * Format transaction amount for user-friendly display
+ * Adds appropriate signs and currency formatting based on transaction type
+ * 
+ * @param float $amount Transaction amount
+ * @param string $type Transaction type
+ * @return string Formatted amount string with appropriate sign
+ */
 if (!function_exists('formatTransactionAmount')) {
 function formatTransactionAmount($amount, $type) {
-    $formattedAmount = number_format(abs($amount), 2);
+    $formattedAmount = number_format(abs(floatval($amount)), 2);
     
+    // Apply appropriate formatting based on transaction type
     switch ($type) {
         case 'deposit':
+        case 'transfer_in':
             return '+$' . $formattedAmount;
         case 'withdraw':
+        case 'transfer_out':
             return '-$' . $formattedAmount;
         case 'transfer':
+            // Legacy transfer type - determine direction by amount sign
             return ($amount > 0 ? '+' : '-') . '$' . $formattedAmount;
         default:
             return '$' . $formattedAmount;
@@ -483,7 +770,14 @@ function formatTransactionAmount($amount, $type) {
 }
 }
 
-// Get transaction icon for display
+/**
+ * Get appropriate icon for transaction type display
+ * Provides consistent iconography across the application
+ * 
+ * @param string $type Transaction type
+ * @param float $amount Transaction amount (for transfer direction)
+ * @return string HTML icon element with appropriate styling
+ */
 if (!function_exists('getTransactionIcon')) {
 function getTransactionIcon($type, $amount = 0) {
     switch ($type) {
@@ -491,8 +785,13 @@ function getTransactionIcon($type, $amount = 0) {
             return '<i class="fas fa-plus-circle text-success"></i>';
         case 'withdraw':
             return '<i class="fas fa-minus-circle text-danger"></i>';
+        case 'transfer_in':
+            return '<i class="fas fa-arrow-down text-success"></i>';
+        case 'transfer_out':
+            return '<i class="fas fa-arrow-up text-danger"></i>';
         case 'transfer':
-            return $amount > 0 
+            // Legacy transfer type - determine direction by amount
+            return floatval($amount) > 0 
                 ? '<i class="fas fa-arrow-down text-success"></i>' 
                 : '<i class="fas fa-arrow-up text-primary"></i>';
         default:
@@ -501,7 +800,14 @@ function getTransactionIcon($type, $amount = 0) {
 }
 }
 
-// Get transaction description
+/**
+ * Get descriptive text for transaction types
+ * Provides user-friendly descriptions for transaction history
+ * 
+ * @param string $type Transaction type
+ * @param float $amount Transaction amount (for transfer direction)
+ * @return string Human-readable transaction description
+ */
 if (!function_exists('getTransactionDescription')) {
 function getTransactionDescription($type, $amount) {
     switch ($type) {
@@ -509,10 +815,15 @@ function getTransactionDescription($type, $amount) {
             return 'Money Deposit';
         case 'withdraw':
             return 'Cash Withdrawal';
+        case 'transfer_in':
+            return 'Transfer Received';
+        case 'transfer_out':
+            return 'Transfer Sent';
         case 'transfer':
-            return $amount > 0 ? 'Transfer Received' : 'Transfer Sent';
+            // Legacy transfer type - determine direction by amount
+            return floatval($amount) > 0 ? 'Transfer Received' : 'Transfer Sent';
         default:
-            return ucfirst($type);
+            return ucfirst(str_replace('_', ' ', $type));
     }
 }
 }

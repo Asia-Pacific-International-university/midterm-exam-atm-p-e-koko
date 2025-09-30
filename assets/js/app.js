@@ -1,13 +1,27 @@
-// AJAX Transaction Processing
+/**
+ * ATM System Frontend JavaScript
+ * 
+ * This file handles all client-side functionality for the ATM system including:
+ * - AJAX transaction processing (deposits and withdrawals)
+ * - Real-time form validation and user feedback
+ * - Dynamic UI updates and balance refreshing
+ * - Error handling and user experience optimization
+ * - Loading states and visual feedback
+ * 
+ * @author ATM System
+ * @version 1.0
+ */
+
+// Initialize application when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Get form elements
+    // Cache DOM elements for better performance
     const depositForm = document.getElementById('depositForm');
     const withdrawForm = document.getElementById('withdrawForm');
     const messageArea = document.getElementById('messageArea');
     const messageContent = document.getElementById('messageContent');
     const balanceElement = document.getElementById('currentBalance');
 
-    // Add event listeners for forms
+    // Set up event listeners for transaction forms
     if (depositForm) {
         depositForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -25,52 +39,59 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Process transaction via AJAX
-     * @param {string} type - Transaction type (deposit/withdraw)
-     * @param {string} amount - Transaction amount
+     * Process banking transactions via AJAX API
+     * 
+     * This function handles the complete transaction flow including:
+     * - Client-side validation
+     * - API communication
+     * - UI state management
+     * - Error handling and user feedback
+     * - Balance updates
+     * 
+     * @param {string} type - Transaction type ('deposit' or 'withdraw')
+     * @param {string} amount - Transaction amount as string
      */
     function processTransaction(type, amount) {
-        // Validate input
+        // Client-side validation
         if (!amount || parseFloat(amount) <= 0) {
             showMessage('Please enter a valid amount greater than 0', 'error');
             return;
         }
 
-        // Show loading state
+        // Show loading state for better UX
         showMessage('Processing transaction...', 'loading');
         
-        // Disable form buttons during processing
+        // Cache button elements for state management
         const depositBtn = depositForm ? depositForm.querySelector('button[type="submit"]') : null;
         const withdrawBtn = withdrawForm ? withdrawForm.querySelector('button[type="submit"]') : null;
         
+        // Set loading state on appropriate button
         if (type === 'deposit' && depositBtn) {
-            depositBtn.disabled = true;
-            depositBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            setButtonLoading(depositBtn, true);
         }
         if (type === 'withdraw' && withdrawBtn) {
-            withdrawBtn.disabled = true;
-            withdrawBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            setButtonLoading(withdrawBtn, true);
         }
 
-        // Get CSRF token from the appropriate form
+        // Extract CSRF token for security
         const formId = type === 'deposit' ? 'depositForm' : 'withdrawForm';
         const form = document.getElementById(formId);
         const csrfInput = form ? form.querySelector('input[name="csrf_token"]') : null;
         const csrfToken = csrfInput ? csrfInput.value : '';
 
-        // Validate CSRF token exists (optional for now)
+        // Log warning if CSRF token is missing (for debugging)
         if (!csrfToken) {
             console.warn('CSRF token not found, proceeding without it');
         }
 
-        // Prepare data for API
+        // Prepare transaction data for API
         const transactionData = {
             transaction_type: type,
             amount: parseFloat(amount),
             csrf_token: csrfToken
         };
 
-        // Make AJAX request
+        // Make AJAX API request with comprehensive error handling
         fetch('api/process_transaction.php', {
             method: 'POST',
             headers: {
@@ -79,13 +100,17 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify(transactionData)
         })
         .then(response => {
-            // Always try to parse the JSON response, even for error status codes
+            // Parse JSON response regardless of HTTP status for better error handling
             return response.json().then(data => {
-                // Return both response status and parsed data
-                return { ok: response.ok, status: response.status, data: data };
+                return { 
+                    ok: response.ok, 
+                    status: response.status, 
+                    data: data 
+                };
             });
         })
         .then(result => {
+            // Handle successful transaction responses
             if (result.ok && result.data.success) {
                 // Transaction successful
                 showMessage(result.data.message, 'success');
@@ -133,18 +158,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Show message to user
-     * @param {string} message - Message text
-     * @param {string} type - Message type (success/error/loading)
+     * Display user feedback messages with appropriate styling
+     * 
+     * @param {string} message - The message text to display
+     * @param {string} type - Message type: 'success', 'error', 'loading', 'info', 'warning'
      */
     function showMessage(message, type) {
         if (messageArea && messageContent) {
             messageContent.textContent = message;
             
-            // Remove existing Bootstrap alert classes
+            // Reset alert classes
             messageArea.className = 'alert alert-dismissible fade show';
             
-            // Add appropriate Bootstrap alert class
+            // Apply Bootstrap alert styling based on message type
             switch(type) {
                 case 'success':
                     messageArea.classList.add('alert-success');
@@ -165,12 +191,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     messageArea.classList.add('alert-secondary');
             }
             
-            // Remove d-none class to show the alert
+            // Show the message area
             messageArea.classList.remove('d-none');
             
-            // Auto-hide messages after delay (errors stay longer)
+            // Auto-hide messages after appropriate delay (errors stay visible longer)
             if (type !== 'loading') {
-                const hideDelay = type === 'error' ? 8000 : 5000; // Show errors longer
+                const hideDelay = type === 'error' ? 8000 : 5000;
                 setTimeout(() => {
                     hideMessage();
                 }, hideDelay);
@@ -179,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Hide message area
+     * Hide the message area from view
      */
     function hideMessage() {
         if (messageArea) {
@@ -188,21 +214,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Update balance display
-     * @param {string} newBalance - Formatted balance string
+     * Update the balance display with smooth animation
+     * 
+     * @param {string} newBalance - Formatted balance string (e.g., "1,234.56")
      */
     function updateBalance(newBalance) {
         if (balanceElement) {
-            // Add animation class
+            // Add CSS animation class for visual feedback
             balanceElement.classList.add('balance-updating');
             
-            // Update balance text with animation
+            // Update the balance text with a slight delay for smooth transition
             setTimeout(() => {
                 balanceElement.textContent = '฿' + newBalance;
                 balanceElement.classList.remove('balance-updating');
                 balanceElement.classList.add('balance-updated');
                 
-                // Remove animation class after animation completes
+                // Remove animation class after transition completes
                 setTimeout(() => {
                     balanceElement.classList.remove('balance-updated');
                 }, 500);
@@ -211,7 +238,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Reset form buttons to original state
+     * Set loading state on transaction buttons
+     * 
+     * @param {HTMLElement} button - Button element to modify
+     * @param {boolean} isLoading - Whether to show loading state
+     */
+    function setButtonLoading(button, isLoading) {
+        if (!button) return;
+        
+        if (isLoading) {
+            button.disabled = true;
+            const buttonType = button.closest('#depositForm') ? 'Depositing' : 'Withdrawing';
+            button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${buttonType}...`;
+        }
+    }
+
+    /**
+     * Reset all form buttons to their original state
      */
     function resetFormButtons() {
         const depositBtn = depositForm ? depositForm.querySelector('button[type="submit"]') : null;
@@ -229,39 +272,50 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Refresh recent activities (optional enhancement)
+     * Refresh recent activities display
+     * 
+     * Note: In a more advanced implementation, this could use AJAX to fetch
+     * updated activities without full page reload. For now, we reload the page
+     * to ensure all data is current.
      */
     function refreshRecentActivities() {
-        // This could be enhanced to dynamically update the recent activities section
-        // For now, we'll just reload the page after successful transactions to show updated activities
+        // Reload page after a delay to show updated activities and balance
         setTimeout(() => {
             window.location.reload();
         }, 2000);
     }
 
-    // Add click handler to close messages
+    // Additional event listeners for better user experience
+    
+    // Allow clicking message area to dismiss it
     if (messageArea) {
         messageArea.addEventListener('click', function() {
             hideMessage();
         });
     }
 
-    // Form validation enhancements
+    // Form validation and input formatting enhancements
     const amountInputs = document.querySelectorAll('input[type="number"]');
     amountInputs.forEach(input => {
-        // Format input on blur
+        // Format number input on blur for consistent display
         input.addEventListener('blur', function() {
             if (this.value) {
                 const value = parseFloat(this.value);
-                this.value = value.toFixed(2);
+                if (!isNaN(value) && value > 0) {
+                    this.value = value.toFixed(2);
+                }
             }
         });
 
-        // Prevent negative values
+        // Prevent negative values and provide user feedback
         input.addEventListener('input', function() {
             if (this.value < 0) {
                 this.value = '';
+                showMessage('Amount must be positive', 'warning');
             }
         });
     });
+
+    // Application initialization complete
+    console.log('ATM System JavaScript loaded successfully');
 });

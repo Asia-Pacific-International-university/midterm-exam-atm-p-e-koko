@@ -104,28 +104,98 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="assets/css/style.css">
-    <title>Login</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Login - My ATM</title>
 </head>
-<body>
-    <form action="login.php" method="POST">
-        <?php echo getCSRFTokenField(); ?>
-        <h2>Login</h2>
-        <?php if ($message != ""): ?>
-            <p style="color: red; text-align:center;"><?php echo $message; ?></p>
-        <?php endif; ?>
-        
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required>
+<body class="bg-light d-flex align-items-center min-vh-100">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow border-0">
+                    <div class="card-body p-4">
+                        <!-- Logo/Brand -->
+                        <div class="text-center mb-4">
+                            <h2 class="h3 fw-bold text-primary">
+                                <i class="fas fa-university"></i> My ATM
+                            </h2>
+                            <p class="text-muted">Sign in to your account</p>
+                        </div>
 
-        <label for="pin">PIN:</label>
-        <input type="password" id="pin" name="pin" required>
+                        <!-- Error Message -->
+                        <?php if ($message != ""): ?>
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <?php echo htmlspecialchars($message); ?>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        <?php endif; ?>
 
-        <button type="submit">Login</button>
-        
-        <p style="text-align: center; margin-top: 15px;">
-            Don't have an account? <a href="register.php">Register here</a>
-        </p>
-    </form>
+                        <!-- Login Form -->
+                        <form action="login.php" method="POST">
+                            <?php echo getCSRFTokenField(); ?>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label fw-semibold">
+                                    <i class="fas fa-envelope text-primary"></i> Email Address
+                                </label>
+                                <input type="email" 
+                                       id="email" 
+                                       name="email" 
+                                       class="form-control form-control-lg" 
+                                       placeholder="Enter your email"
+                                       required>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="pin" class="form-label fw-semibold">
+                                    <i class="fas fa-key text-primary"></i> PIN
+                                </label>
+                                <input type="password" 
+                                       id="pin" 
+                                       name="pin" 
+                                       class="form-control form-control-lg" 
+                                       placeholder="Enter your PIN"
+                                       maxlength="6"
+                                       required>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle"></i> Enter your 4-6 digit PIN
+                                </div>
+                            </div>
+
+                            <div class="d-grid mb-3">
+                                <button type="submit" class="btn btn-primary btn-lg fw-semibold">
+                                    <i class="fas fa-sign-in-alt"></i> Sign In
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Register Link -->
+                        <div class="text-center">
+                            <p class="mb-0 text-muted">
+                                Don't have an account? 
+                                <a href="register.php" class="text-decoration-none fw-semibold">
+                                    Create Account
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Info -->
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt"></i> 
+                        Secure banking with advanced encryption
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
